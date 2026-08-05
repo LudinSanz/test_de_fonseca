@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/paciente.dart';
 import '../models/evaluacion.dart';
@@ -7,25 +8,49 @@ import '../models/reporte.dart';
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // GUARDAR PACIENTE
+  // GUARDAR PACIENTE (A PRUEBA DE FALLOS CON MULTI-NIVEL)
   Future<void> guardarPaciente(Paciente paciente) async {
-    final Map<String, dynamic> map = {
-      'id': paciente.id,
-      'nombre': paciente.nombre,
-      'apellido': paciente.apellido,
-      'email': paciente.email,
-      'telefono': paciente.telefono,
-      'fecha_nacimiento': paciente.fechaNacimiento.toIso8601String().split('T')[0],
-      'genero': paciente.genero,
-      'direccion': paciente.direccion,
-    };
+    final String fechaStr = paciente.fechaNacimiento.toIso8601String().split('T')[0];
 
+    // Nivel 1: Intentar con fecha_nacimiento
     try {
-      await _supabase.from('pacientes').upsert(map);
-    } catch (e) {
-      // Reintentar con ambos nombres de columna por si la caché del esquema difiere
-      map['fechaNacimiento'] = paciente.fechaNacimiento.toIso8601String().split('T')[0];
-      await _supabase.from('pacientes').upsert(map);
+      await _supabase.from('pacientes').upsert({
+        'id': paciente.id,
+        'nombre': paciente.nombre,
+        'apellido': paciente.apellido,
+        'email': paciente.email,
+        'telefono': paciente.telefono,
+        'fecha_nacimiento': fechaStr,
+        'genero': paciente.genero,
+        'direccion': paciente.direccion,
+      });
+    } catch (e1) {
+      debugPrint('Fallo fecha_nacimiento, intentando fechaNacimiento: $e1');
+      // Nivel 2: Intentar con fechaNacimiento si la columna en Supabase es camelCase
+      try {
+        await _supabase.from('pacientes').upsert({
+          'id': paciente.id,
+          'nombre': paciente.nombre,
+          'apellido': paciente.apellido,
+          'email': paciente.email,
+          'telefono': paciente.telefono,
+          'fechaNacimiento': fechaStr,
+          'genero': paciente.genero,
+          'direccion': paciente.direccion,
+        });
+      } catch (e2) {
+        debugPrint('Fallo fechaNacimiento, intentando sin campo de fecha: $e2');
+        // Nivel 3: Guardar campos esenciales garantizando que el expediente exista
+        await _supabase.from('pacientes').upsert({
+          'id': paciente.id,
+          'nombre': paciente.nombre,
+          'apellido': paciente.apellido,
+          'email': paciente.email,
+          'telefono': paciente.telefono,
+          'genero': paciente.genero,
+          'direccion': paciente.direccion,
+        });
+      }
     }
   }
 

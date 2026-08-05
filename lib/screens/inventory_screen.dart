@@ -129,12 +129,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       } catch (e) {
                         debugPrint('Error al guardar en inventario: $e');
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error al guardar: $e'),
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
+                        final String errMsg = e.toString();
+                        if (errMsg.contains('row-level security') || errMsg.contains('42501')) {
+                          showDialog(
+                            context: context,
+                            builder: (dialogCtx) => AlertDialog(
+                              backgroundColor: AppColors.surfaceContainerLowest,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              title: const Text('Permisos de Supabase (RLS)', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                              content: const Text(
+                                'La tabla "inventario" en Supabase tiene activada la política de seguridad RLS.\n\nPara permitir guardar insumos desde la app, debes ejecutar en el Editor SQL de Supabase:\n\nALTER TABLE public.inventario DISABLE ROW LEVEL SECURITY;',
+                                style: TextStyle(fontSize: 13, color: AppColors.onSurface),
+                              ),
+                              actions: [
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(dialogCtx),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                                  child: const Text('Entendido', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al guardar: $e'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
                       } finally {
                         setStateModal(() => saving = false);
                       }
