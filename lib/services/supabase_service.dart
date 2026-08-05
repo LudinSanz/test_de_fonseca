@@ -9,9 +9,24 @@ class SupabaseService {
 
   // GUARDAR PACIENTE
   Future<void> guardarPaciente(Paciente paciente) async {
-    final map = paciente.toMap();
-    map['id'] = paciente.id;
-    await _supabase.from('pacientes').upsert(map);
+    final Map<String, dynamic> map = {
+      'id': paciente.id,
+      'nombre': paciente.nombre,
+      'apellido': paciente.apellido,
+      'email': paciente.email,
+      'telefono': paciente.telefono,
+      'fecha_nacimiento': paciente.fechaNacimiento.toIso8601String().split('T')[0],
+      'genero': paciente.genero,
+      'direccion': paciente.direccion,
+    };
+
+    try {
+      await _supabase.from('pacientes').upsert(map);
+    } catch (e) {
+      // Reintentar con ambos nombres de columna por si la caché del esquema difiere
+      map['fechaNacimiento'] = paciente.fechaNacimiento.toIso8601String().split('T')[0];
+      await _supabase.from('pacientes').upsert(map);
+    }
   }
 
   // LEER PACIENTE

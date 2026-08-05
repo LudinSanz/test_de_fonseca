@@ -21,7 +21,7 @@ class Paciente {
 
   factory Paciente.fromMap(Map<String, dynamic> map, String documentId) {
     DateTime parsedDate;
-    final fn = map['fechaNacimiento'] ?? map['fecha_nacimiento'];
+    final fn = map['fecha_nacimiento'] ?? map['fechaNacimiento'];
     if (fn is DateTime) {
       parsedDate = fn;
     } else if (fn is String) {
@@ -43,13 +43,15 @@ class Paciente {
   }
 
   Map<String, dynamic> toMap() {
+    final String fechaStr = fechaNacimiento.toIso8601String().split('T')[0];
     return {
       'id': id,
       'nombre': nombre,
       'apellido': apellido,
       'email': email,
       'telefono': telefono,
-      'fechaNacimiento': fechaNacimiento.toIso8601String(),
+      'fecha_nacimiento': fechaStr,
+      'fechaNacimiento': fechaStr,
       'genero': genero,
       'direccion': direccion,
     };

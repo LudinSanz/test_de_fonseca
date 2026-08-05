@@ -43,10 +43,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Color _getSeverityColor(String diagnosis) {
-    if (diagnosis.contains('Sin Disfunción')) return AppColors.success;
-    if (diagnosis.contains('Leve')) return AppColors.primary;
-    if (diagnosis.contains('Moderada')) return AppColors.warning;
+  Color _getSeverityColor(String diagnostico) {
+    if (diagnostico.contains('Sin Disfunción') || diagnostico.contains('Bajo')) {
+      return AppColors.success;
+    }
+    if (diagnostico.contains('Leve') || diagnostico.contains('Moderado')) {
+      return AppColors.primary;
+    }
+    if (diagnostico.contains('Moderada')) {
+      return AppColors.warning;
+    }
     return AppColors.error;
   }
 
@@ -55,6 +61,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final String diagnostico = eval['diagnostico'] ?? 'Test de Fonseca';
     final int score = eval['puntuacion'] ?? 0;
+    final String pacienteNombre = eval['paciente_nombre'] ?? 'Paciente General';
     final String fecha = eval['fecha'] != null
         ? eval['fecha'].toString().split('T')[0]
         : DateTime.now().toString().split(' ')[0];
@@ -94,6 +101,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
+                      pw.Text('Paciente: $pacienteNombre', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 6),
                       pw.Text('Puntuación Anamnésica: $score / 100 Puntos', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 6),
                       pw.Text('Diagnóstico ATM: $diagnostico', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
@@ -121,10 +130,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
 
-    // Abre el menú nativo de compartir (WhatsApp, Correo, Guardar, etc.)
     await Printing.sharePdf(
       bytes: await pdf.save(),
-      filename: 'rizo_fonseca_reporte_${eval['id'] ?? 'doc'}.pdf',
+      filename: 'informe_atm_${eval['id'] ?? "eval"}.pdf',
     );
   }
 
@@ -183,9 +191,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
             : _evaluacionesHistoricas.isEmpty
                 ? Center(
                     child: Column(
@@ -227,6 +233,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     itemBuilder: (context, index) {
                       final eval = _evaluacionesHistoricas[index];
                       final String diagnostico = eval['diagnostico'] ?? 'Evaluación ATM';
+                      final String pacienteNombre = eval['paciente_nombre'] ?? 'Paciente General';
                       final int score = eval['puntuacion'] ?? 0;
                       final Color severityColor = _getSeverityColor(diagnostico);
                       final String fechaStr = eval['fecha'] != null
@@ -258,38 +265,45 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Icon(
                                 Icons.assignment_turned_in,
                                 color: severityColor,
-                                size: 28,
+                                size: 24,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    diagnostico,
-                                    style: TextStyle(
-                                      fontSize: 15,
+                                    pacienteNombre,
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: AppColors.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$diagnostico • Puntos: $score',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                       color: severityColor,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    'Puntuación: $score / 100 pts • Fecha: $fechaStr',
+                                    'Fecha: $fechaStr',
                                     style: const TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       color: AppColors.textLight,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-
-                            // Botón Exportar / Compartir por cualquier medio
                             IconButton(
-                              icon: const Icon(Icons.share_outlined, color: AppColors.primary),
-                              tooltip: 'Compartir PDF por WhatsApp, Correo, etc.',
+                              icon: const Icon(Icons.share, color: AppColors.primary),
+                              tooltip: 'Compartir PDF',
                               onPressed: () => _compartirInformePDF(eval),
                             ),
                           ],

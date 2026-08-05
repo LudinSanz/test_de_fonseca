@@ -3,15 +3,21 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
+import '../models/paciente.dart';
 
 class FonsecaTestScreen extends StatefulWidget {
-  const FonsecaTestScreen({super.key});
+  final Paciente? pacienteInicial;
+  const FonsecaTestScreen({super.key, this.pacienteInicial});
 
   @override
   State<FonsecaTestScreen> createState() => _FonsecaTestScreenState();
 }
 
 class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
+  List<Paciente> _pacientes = [];
+  Paciente? _pacienteSeleccionado;
+  bool _loadingPacientes = true;
+
   final List<Map<String, dynamic>> _questions = [
     {
       'question': '¿Tiene dificultad para abrir la boca?',
@@ -60,9 +66,50 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
   double _btnScale = 1.0;
 
   @override
+  void initState() {
+    super.initState();
+    _cargarPacientes();
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarPacientes() async {
+    setState(() => _loadingPacientes = true);
+    try {
+      final supabase = Supabase.instance.client;
+      final res = await supabase.from('pacientes').select();
+      final list = (res as List)
+          .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
+          .toList();
+
+      setState(() {
+        _pacientes = list;
+        if (widget.pacienteInicial != null) {
+          _pacienteSeleccionado = widget.pacienteInicial;
+        } else if (list.isNotEmpty) {
+          _pacienteSeleccionado = list.first;
+        } else {
+          _pacienteSeleccionado = Paciente(
+            id: 'paciente_general',
+            nombre: 'Paciente',
+            apellido: 'General',
+            email: 'paciente@clinic.com',
+            telefono: '+50255551234',
+            fechaNacimiento: DateTime(1995, 1, 1),
+            genero: 'Masculino',
+            direccion: 'Guatemala',
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Error al cargar pacientes en Fonseca: $e');
+    } finally {
+      if (mounted) setState(() => _loadingPacientes = false);
+    }
   }
 
   int _calculateScore() {
@@ -101,13 +148,17 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     final score = _calculateScore();
     final diagnosis = _getDiagnosis(score);
     final severityColor = _getSeverityColor(score);
+    final pacienteNombre = _pacienteSeleccionado != null
+        ? '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}'
+        : 'Paciente General';
 
-    // Guardar en Supabase
+    // Guardar en Supabase vinculado al paciente seleccionado
     final supabase = Supabase.instance.client;
-    final currentUserId = supabase.auth.currentUser?.id ?? '';
     
     final evaluacionData = {
-      'paciente_id': 'paciente_demo',
+      'id': 'fonseca_${DateTime.now().millisecondsSinceEpoch}',
+      'paciente_id': _pacienteSeleccionado?.id ?? 'paciente_general',
+      'paciente_nombre': pacienteNombre,
       'fecha': DateTime.now().toIso8601String(),
       'puntuacion': score,
       'diagnostico': diagnosis,
@@ -140,26 +191,31 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: severityColor.withOpacity(0.1),
+                  color: severityColor.withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  score >= 45 ? Icons.warning_amber_rounded : Icons.verified_user_outlined,
-                  size: 54,
+                  Icons.health_and_safety_outlined,
+                  size: 52,
                   color: severityColor,
                 ),
               ),
               const SizedBox(height: 20),
               const Text(
-                'Diagnóstico de Fonseca',
+                'Diagnóstico Anamnésico ATM',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.onSurface,
                 ),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Paciente: $pacienteNombre',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 8),
               Container(
@@ -169,15 +225,15 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$score / 100 Puntos',
+                  'Puntuación: $score / 100 Puntos',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: severityColor,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Text(
                 diagnosis,
                 style: TextStyle(
@@ -189,7 +245,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Los resultados se han guardado exitosamente en tu expediente de Supabase.',
+                'El expediente clínico del paciente ha sido actualizado en el histórico de Supabase.',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textLight,
@@ -199,42 +255,14 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Botón Exportar PDF
+              // Export PDF Button
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton.icon(
-                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 20, color: AppColors.primary),
-                  label: const Text(
-                    'Compartir Informe PDF',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  onPressed: () async {
-                    final pdf = pw.Document();
-                    pdf.addPage(
-                      pw.Page(
-                        build: (pw.Context context) {
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('RIZO DENTAL - Test Anamnésico de Fonseca', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                              pw.SizedBox(height: 10),
-                              pw.Text('Puntuación Total: $score/100'),
-                              pw.Text('Diagnóstico: $diagnosis'),
-                              pw.SizedBox(height: 20),
-                              pw.Text('Respuestas del Paciente:'),
-                              for (var i = 0; i < _questions.length; i++)
-                                pw.Text('${i + 1}. ${_questions[i]['question']}: ${_questions[i]['answer']}'),
-                            ],
-                          );
-                        },
-                      ),
-                    );
-                    await Printing.sharePdf(bytes: await pdf.save(), filename: 'rizo_fonseca_reporte.pdf');
-                  },
+                  icon: const Icon(Icons.picture_as_pdf, size: 20, color: AppColors.primary),
+                  label: const Text('Exportar PDF al Paciente', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  onPressed: () => _generatePdf(score, diagnosis, pacienteNombre),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -243,22 +271,21 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Botón Finalizar
+              // Button to Return to Home
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    Navigator.pop(context, {
-                      'score': score,
-                      'diagnosis': diagnosis,
-                    });
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                   ),
                   child: const Text(
                     'Finalizar y Volver al Inicio',
@@ -273,13 +300,71 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     );
   }
 
-  void _answerQuestion(String answer) {
+  void _generatePdf(int score, String diagnosis, String pacienteNombre) async {
+    final pdf = pw.Document();
+    final fechaStr = DateTime.now().toString().split(' ')[0];
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(32),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('The Clinical Sanctuary • TEST ANAMNÉSICO FONSECA ATM', style: const pw.TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                    pw.Text('Fecha: $fechaStr', style: const pw.TextStyle(fontSize: 12)),
+                  ],
+                ),
+                pw.Divider(),
+                pw.SizedBox(height: 16),
+                pw.Text('PACIENTE: $pacienteNombre', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 16),
+                pw.Text('RESULTADO DEL DIAGNÓSTICO:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                pw.Text('Puntuación Total: $score / 100 Puntos', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Clasificación: $diagnosis', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 20),
+                pw.Text('PREGUNTAS Y RESPUESTAS CLÍNICAS:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 10),
+                for (var i = 0; i < _questions.length; i++)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 6),
+                    child: pw.Text('${i + 1}. ${_questions[i]['question']} -> ${_questions[i]['answer'] ?? "No respondido"}'),
+                  ),
+                pw.Spacer(),
+                pw.Divider(),
+                pw.Center(
+                  child: pw.Text('Rizo Dental Sanctuary • Expediente Clínico de Paciente', style: const pw.TextStyle(fontSize: 10)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'test_fonseca_${_pacienteSeleccionado?.id ?? "paciente"}.pdf',
+    );
+  }
+
+  void _selectAnswer(String answer) {
     setState(() {
       _questions[_currentQuestionIndex]['answer'] = answer;
     });
 
     if (_currentQuestionIndex < _questions.length - 1) {
-      _currentQuestionIndex++;
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -289,9 +374,21 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     }
   }
 
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
+      filled: true,
+      fillColor: AppColors.surfaceContainerLow,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.8)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double progress = (_currentQuestionIndex + 1) / _questions.length;
+    final progress = (_currentQuestionIndex + 1) / _questions.length;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -300,17 +397,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
-          onPressed: () {
-            if (_currentQuestionIndex > 0) {
-              setState(() => _currentQuestionIndex--);
-              _pageController.previousPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            } else {
-              Navigator.pop(context);
-            }
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           children: [
@@ -319,7 +406,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
               height: 32,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.assessment_outlined,
+                Icons.assignment_outlined,
                 color: AppColors.primary,
               ),
             ),
@@ -337,7 +424,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                   ),
                 ),
                 Text(
-                  'Test de Fonseca • Evaluación ATM',
+                  'Test Anamnésico de Fonseca',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -349,162 +436,150 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Rizo Dental Progress Bar Card
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: AppColors.shadowSoft,
-                    blurRadius: 20,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Pregunta ${_currentQuestionIndex + 1} de ${_questions.length}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+        child: _loadingPacientes
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Patient Selection Top Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 18, offset: Offset(0, 6)),
+                        ],
                       ),
-                      Text(
-                        '${(progress * 100).toInt()}% completado',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textLight,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Paciente Evaluado:',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<Paciente>(
+                            value: _pacienteSeleccionado,
+                            decoration: _inputDecoration('Seleccionar Paciente'),
+                            dropdownColor: AppColors.surfaceContainerLowest,
+                            items: _pacientes.map((p) {
+                              return DropdownMenuItem<Paciente>(
+                                value: p,
+                                child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _pacienteSeleccionado = val);
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                      backgroundColor: AppColors.surfaceContainerLow,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-            // Question View (PageView with Tonal Layering Cards)
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _questions.length,
-                itemBuilder: (context, index) {
-                  final String currentAnswer = _questions[index]['answer'] ?? '';
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Progress Bar
+                    Row(
                       children: [
-                        // Question Card (Signature Component)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.shadowSoft,
-                                blurRadius: 24,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.08),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.help_outline,
-                                  size: 44,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                _questions[index]['question'],
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.onSurface,
-                                  height: 1.4,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 8,
+                              backgroundColor: AppColors.surfaceContainerLow,
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // Answer Options (Sí, A veces, No)
-                        _buildOptionButton(
-                          label: 'Sí (Frecuente)',
-                          value: 'Sí',
-                          isSelected: currentAnswer == 'Sí',
-                          activeGradient: const [AppColors.primary, AppColors.primaryContainer],
-                          points: '10 puntos',
-                        ),
-                        const SizedBox(height: 14),
-                        _buildOptionButton(
-                          label: 'A veces (Ocasional)',
-                          value: 'A veces',
-                          isSelected: currentAnswer == 'A veces',
-                          activeGradient: const [AppColors.primaryContainer, Color(0xFF0288D1)],
-                          points: '5 puntos',
-                        ),
-                        const SizedBox(height: 14),
-                        _buildOptionButton(
-                          label: 'No (Nunca)',
-                          value: 'No',
-                          isSelected: currentAnswer == 'No',
-                          activeGradient: const [Color(0xFF546E7A), Color(0xFF78909C)],
-                          points: '0 puntos',
+                        const SizedBox(width: 12),
+                        Text(
+                          '${_currentQuestionIndex + 1}/${_questions.length}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ],
                     ),
-                  );
-                },
+                    const SizedBox(height: 20),
+
+                    // Question Cards PageView
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentQuestionIndex = index;
+                          });
+                        },
+                        itemCount: _questions.length,
+                        itemBuilder: (context, index) {
+                          final question = _questions[index];
+                          final currentAnswer = question['answer'];
+
+                          return Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.shadowSoft,
+                                  blurRadius: 24,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Pregunta ${index + 1}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  question['question'],
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.onSurface,
+                                    height: 1.3,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 36),
+
+                                // Option Buttons
+                                _buildOptionButton('Sí', currentAnswer == 'Sí'),
+                                const SizedBox(height: 12),
+                                _buildOptionButton('A veces', currentAnswer == 'A veces'),
+                                const SizedBox(height: 12),
+                                _buildOptionButton('No', currentAnswer == 'No'),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildOptionButton({
-    required String label,
-    required String value,
-    required bool isSelected,
-    required List<Color> activeGradient,
-    required String points,
-  }) {
+  Widget _buildOptionButton(String text, bool isSelected) {
     return GestureDetector(
       onTapDown: (_) => setState(() => _btnScale = 0.98),
       onTapUp: (_) => setState(() => _btnScale = 1.0),
@@ -514,63 +589,27 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         duration: const Duration(milliseconds: 120),
         child: Container(
           width: double.infinity,
-          height: 56,
+          height: 52,
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(
-                    colors: activeGradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isSelected ? null : AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadowSoft,
-                blurRadius: 16,
-                offset: Offset(0, 4),
-              ),
-            ],
+            color: isSelected ? AppColors.primaryContainer : AppColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(26),
           ),
           child: ElevatedButton(
-            onPressed: () => _answerQuestion(value),
+            onPressed: () => _selectAnswer(text),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(26),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : AppColors.onSurface,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white.withOpacity(0.2)
-                        : AppColors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    points,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : AppColors.textLight,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : AppColors.onSurface,
+              ),
             ),
           ),
         ),
