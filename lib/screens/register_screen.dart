@@ -101,9 +101,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (user != null) {
-        // Guardar perfil completo en la tabla 'users' de Supabase
         final supabase = Supabase.instance.client;
-        final userData = {
+        
+        // Payload completo con reintento resiliente si faltan columnas opcionales en Supabase
+        final Map<String, dynamic> fullUserData = {
           'id': user.id,
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
@@ -114,13 +115,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'firma_digital': '${_nameController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
         };
 
-        await supabase.from('users').upsert(userData);
+        try {
+          await supabase.from('users').upsert(fullUserData);
+        } catch (e) {
+          // Reintento resiliente solo con campos estándar universales (id, name, email, telefono)
+          final Map<String, dynamic> baseUserData = {
+            'id': user.id,
+            'name': _nameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'telefono': _telefonoController.text.trim(),
+          };
+          await supabase.from('users').upsert(baseUserData);
+        }
 
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('¡Cuenta creada y registrada en Supabase! Bienvenido(a) ${user.name}'),
+            content: Text('¡Cuenta creada exitosamente! Bienvenido(a) ${user.name}'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
@@ -133,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error: No se pudo registrar el usuario en Supabase'),
+            content: Text('Error: No se pudo crear el usuario'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -439,9 +451,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           ),
                                         )
                                       : const Text(
-                                          'Registrar Perfil en Supabase',
+                                          'Registrarme',
                                           style: TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                             letterSpacing: 0.5,

@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Asegurar columnas si la tabla ya existía anteriormente
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS colegiado TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS especialidad TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS direccion_clinica TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS firma_digital TEXT;
+
 -- 2. TABLA DE PACIENTES (pacientes)
 CREATE TABLE IF NOT EXISTS public.pacientes (
   id TEXT PRIMARY KEY,
@@ -37,6 +43,7 @@ CREATE TABLE IF NOT EXISTS public.evaluaciones (
   id TEXT PRIMARY KEY,
   pacienteId TEXT,
   paciente_id TEXT,
+  paciente_nombre TEXT,
   fecha TEXT NOT NULL,
   puntuacion INTEGER,
   diagnostico TEXT,
@@ -115,7 +122,7 @@ GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.pacientes TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.evaluaciones TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.recetas TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.inventario TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.inventario DISABLE ROW LEVEL SECURITY;
 GRANT ALL ON TABLE public.citas TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.configuracion TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.reportes TO anon, authenticated, service_role;
