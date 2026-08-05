@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../constants/colors.dart';
 import 'register_screen.dart';
@@ -72,18 +73,33 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('¡Bienvenido(a) ${user.name}!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Verificar si el usuario ya existe previamente registrado en la tabla users de Supabase
+        final supabase = Supabase.instance.client;
+        final existingUser = await supabase
+            .from('users')
+            .select()
+            .eq('email', user.email)
+            .maybeSingle();
+
+        if (existingUser != null) {
+          final nombreRegistrado = existingUser['name'] ?? user.name;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('¡Bienvenido(a) $nombreRegistrado!'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // El usuario NO está registrado previamente -> Denegar acceso
+          await supabase.auth.signOut();
+          _mostrarDialogoNoRegistrado(user.email);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -108,18 +124,33 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('¡Bienvenido(a) ${user.name}!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Verificar si el usuario con Google existe previamente en la tabla users de Supabase
+        final supabase = Supabase.instance.client;
+        final existingUser = await supabase
+            .from('users')
+            .select()
+            .eq('email', user.email)
+            .maybeSingle();
+
+        if (existingUser != null) {
+          final nombrePerfil = existingUser['name'] ?? user.name;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('¡Bienvenido(a) $nombrePerfil!'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // Si NO existe en la base de datos de la clínica -> Denegar acceso
+          await supabase.auth.signOut();
+          _mostrarDialogoNoRegistrado(user.email);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -133,6 +164,61 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _mostrarDialogoNoRegistrado(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(28),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.block_rounded, size: 48, color: AppColors.error),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Acceso Restringido',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'El correo ($email) no se encuentra registrado previamente en la base de datos de Rizo Dental.\n\nSolo el personal y pacientes previamente autorizados pueden acceder.',
+              style: const TextStyle(fontSize: 13, color: AppColors.textLight, height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+                child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showForgotPasswordDialog() async {
