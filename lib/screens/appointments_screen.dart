@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
+import '../utils/pdf_generator.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -61,91 +62,97 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Seleccionar Paciente
-                const Text('Seleccionar Paciente', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                const SizedBox(height: 6),
                 DropdownButtonFormField<Paciente>(
                   value: pacienteSeleccionado,
-                  decoration: _inputDecoration('Paciente'),
+                  decoration: _inputDecoration('Seleccionar Paciente'),
                   dropdownColor: AppColors.surfaceContainerLowest,
                   items: _pacientes.map((p) {
-                    return DropdownMenuItem<Paciente>(
+                    return DropdownMenuItem(
                       value: p,
-                      child: Text('${p.nombre} ${p.apellido}'),
+                      child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
                     );
                   }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setStateDialog(() => pacienteSeleccionado = val);
+                  onChanged: (val) => setStateDialog(() => pacienteSeleccionado = val),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  tileColor: AppColors.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  leading: const Icon(Icons.calendar_today, color: AppColors.primary),
+                  title: Text('Fecha: ${fechaCita.day}/${fechaCita.month}/${fechaCita.year}'),
+                  trailing: const Icon(Icons.edit, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: fechaCita,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 180)),
+                    );
+                    if (picked != null) setStateDialog(() => fechaCita = picked);
                   },
                 ),
-                const SizedBox(height: 14),
-
-                // Fecha y Hora
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.calendar_today, size: 16),
-                        label: Text('${fechaCita.day}/${fechaCita.month}/${fechaCita.year}'),
-                        onPressed: () async {
-                          final p = await showDatePicker(context: context, initialDate: fechaCita, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                          if (p != null) setStateDialog(() => fechaCita = p);
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.surfaceContainerLow, foregroundColor: AppColors.onSurface, elevation: 0),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.access_time, size: 16),
-                        label: Text(horaCita.format(context)),
-                        onPressed: () async {
-                          final t = await showTimePicker(context: context, initialTime: horaCita);
-                          if (t != null) setStateDialog(() => horaCita = t);
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.surfaceContainerLow, foregroundColor: AppColors.onSurface, elevation: 0),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                ListTile(
+                  tileColor: AppColors.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  leading: const Icon(Icons.access_time, color: AppColors.primary),
+                  title: Text('Hora: ${horaCita.format(context)}'),
+                  trailing: const Icon(Icons.edit, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: horaCita,
+                    );
+                    if (picked != null) setStateDialog(() => horaCita = picked);
+                  },
                 ),
-                const SizedBox(height: 14),
-
-                TextField(controller: motivoController, decoration: _inputDecoration('Tratamiento / Motivo de cita')),
                 const SizedBox(height: 12),
-                TextField(controller: notasController, decoration: _inputDecoration('Notas de preparación')),
+                TextField(controller: motivoController, decoration: _inputDecoration('Motivo de consulta')),
+                const SizedBox(height: 12),
+                TextField(controller: notasController, decoration: _inputDecoration('Notas clínicas adicionales')),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
+            ),
             ElevatedButton(
               onPressed: () async {
-                if (pacienteSeleccionado != null) {
-                  final String citaId = 'cita_${DateTime.now().millisecondsSinceEpoch}';
-                  final String fechaHoraStr = '${fechaCita.year}-${fechaCita.month.toString().padLeft(2, "0")}-${fechaCita.day.toString().padLeft(2, "0")} ${horaCita.format(context)}';
+                if (pacienteSeleccionado == null) return;
 
-                  final citaData = {
-                    'id': citaId,
-                    'paciente_id': pacienteSeleccionado!.id,
-                    'paciente_nombre': '${pacienteSeleccionado!.nombre} ${pacienteSeleccionado!.apellido}',
-                    'paciente_telefono': pacienteSeleccionado!.telefono,
-                    'fecha_hora': fechaHoraStr,
-                    'motivo': motivoController.text.trim(),
-                    'estado': 'Programada',
-                    'notas': notasController.text.trim(),
-                  };
+                final dtCombined = DateTime(
+                  fechaCita.year,
+                  fechaCita.month,
+                  fechaCita.day,
+                  horaCita.hour,
+                  horaCita.minute,
+                );
 
-                  try {
-                    final supabase = Supabase.instance.client;
-                    await supabase.from('citas').upsert(citaData);
-                    Navigator.pop(ctx);
-                    _cargarDatos();
-                    _notificarWhatsAppPaciente(citaData);
-                  } catch (e) {
-                    debugPrint('Error al guardar cita: $e');
-                  }
+                final citaData = {
+                  'id': 'cita_${DateTime.now().millisecondsSinceEpoch}',
+                  'paciente_id': pacienteSeleccionado!.id,
+                  'paciente_nombre': '${pacienteSeleccionado!.nombre} ${pacienteSeleccionado!.apellido}',
+                  'paciente_telefono': pacienteSeleccionado!.telefono,
+                  'fecha_hora': dtCombined.toIso8601String(),
+                  'motivo': motivoController.text.trim(),
+                  'notas': notasController.text.trim(),
+                  'estado': 'Programada',
+                };
+
+                try {
+                  final supabase = Supabase.instance.client;
+                  await supabase.from('citas').upsert(citaData);
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  _cargarDatos();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('¡Cita programada y guardada en Supabase!'), backgroundColor: AppColors.success),
+                  );
+                } catch (e) {
+                  debugPrint('Error al guardar cita: $e');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -153,7 +160,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Guardar y Notificar'),
+              child: const Text('Guardar Cita'),
             ),
           ],
         ),
@@ -161,21 +168,55 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  Future<void> _notificarWhatsAppPaciente(Map<String, dynamic> cita) async {
-    final String tel = (cita['paciente_telefono'] ?? '').replaceAll(RegExp(r'[^\d+]'), '');
-    final String msg = Uri.encodeComponent(
-      '📅 *RIZO DENTAL - CONFIRMACIÓN DE CITA*\n'
-      'Estimado(a) *${cita["paciente_nombre"]}*,\n\n'
-      'Le confirmamos su cita odontológica:\n'
-      '📍 *Lugar:* Rizo Dental Sanctuary\n'
-      '🕒 *Fecha y Hora:* ${cita["fecha_hora"]}\n'
-      '🩺 *Motivo:* ${cita["motivo"]}\n\n'
-      'Por favor confirme su asistencia respondiendo a este mensaje. ¡Le esperamos!',
+  void _exportarPdfCita(Map<String, dynamic> cita) async {
+    final supabase = Supabase.instance.client;
+    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
+
+    final paciente = _pacientes.firstWhere(
+      (p) => p.id == cita['paciente_id'],
+      orElse: () => Paciente(
+        id: cita['paciente_id'] ?? 'id',
+        nombre: cita['paciente_nombre'] ?? 'Paciente',
+        apellido: '',
+        email: 'paciente@clinic.com',
+        telefono: cita['paciente_telefono'] ?? '+50255551234',
+        fechaNacimiento: DateTime(1990, 1, 1),
+        genero: 'No especificado',
+        direccion: 'Guatemala',
+      ),
     );
 
-    final Uri waUri = Uri.parse('https://wa.me/$tel?text=$msg');
-    if (await canLaunchUrl(waUri)) {
-      await launchUrl(waUri, mode: LaunchMode.externalApplication);
+    final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
+    final fechaHoraStr = '${dt.day}/${dt.month}/${dt.year} - ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+
+    await PdfGenerator.generarPdfCita(
+      paciente: paciente,
+      fechaHora: fechaHoraStr,
+      motivo: cita['motivo'] ?? 'Consulta Odontológica',
+      notas: cita['notas'] ?? '',
+      estado: cita['estado'] ?? 'Programada',
+      doctorInfo: doctorRes,
+    );
+  }
+
+  void _notificarWhatsApp(Map<String, dynamic> cita) async {
+    final tel = cita['paciente_telefono'] ?? '';
+    final nombre = cita['paciente_nombre'] ?? 'Paciente';
+    final motivo = cita['motivo'] ?? 'Cita Odontológica';
+    final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
+    final fechaStr = '${dt.day}/${dt.month}/${dt.year} a las ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+
+    final mensaje = 'Hola $nombre, te recordamos tu cita odontológica en Rizo Dental para $motivo el día $fechaStr. ¡Te esperamos!';
+    final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(mensaje)}');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir WhatsApp para $cleanPhone'), backgroundColor: AppColors.error),
+      );
     }
   }
 
@@ -227,7 +268,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   ),
                 ),
                 Text(
-                  'Gestión de Citas & Recordatorios',
+                  'Gestión de Citas Odontológicas',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -239,7 +280,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_task, color: AppColors.primary, size: 28),
+            icon: const Icon(Icons.add, color: AppColors.primary, size: 28),
             onPressed: _abrirModalNuevaCita,
           ),
         ],
@@ -255,11 +296,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), shape: BoxShape.circle),
-                          child: const Icon(Icons.calendar_month_outlined, size: 64, color: AppColors.primary),
+                          child: const Icon(Icons.event_available_outlined, size: 64, color: AppColors.primary),
                         ),
                         const SizedBox(height: 16),
-                        const Text('No hay citas programadas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
+                        const Text('No hay citas agendadas aún', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.add, color: Colors.white),
                           label: const Text('Programar Primera Cita'),
@@ -273,42 +314,80 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     itemCount: _citas.length,
                     itemBuilder: (context, index) {
                       final cita = _citas[index];
+                      final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
+                      final fechaHoraStr = '${dt.day}/${dt.month}/${dt.year} - ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 14),
+                        margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: const [
                             BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                           ],
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
-                              child: const Icon(Icons.event, color: AppColors.primary, size: 26),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
+                                  child: const Icon(Icons.person, color: AppColors.primary),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        cita['paciente_nombre'] ?? 'Paciente',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onSurface),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Motivo: ${cita['motivo'] ?? "Consulta"}',
+                                        style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text('Horario: $fechaHoraStr', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(cita['paciente_nombre'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onSurface)),
-                                  const SizedBox(height: 2),
-                                  Text('${cita["fecha_hora"]} • ${cita["motivo"]}', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.send_to_mobile, color: Color(0xFF25D366)),
-                              tooltip: 'Recordatorio WhatsApp',
-                              onPressed: () => _notificarWhatsAppPaciente(cita),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.picture_as_pdf, size: 18, color: AppColors.primary),
+                                    label: const Text('Exportar PDF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                    onPressed: () => _exportarPdfCita(cita),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: AppColors.ghostOutline, width: 1),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.send_to_mobile, size: 18, color: Colors.white),
+                                    label: const Text('WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    onPressed: () => _notificarWhatsApp(cita),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.success,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

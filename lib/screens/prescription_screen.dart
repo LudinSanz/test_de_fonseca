@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
-import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
+import '../utils/pdf_generator.dart';
 
 class PrescriptionScreen extends StatefulWidget {
   const PrescriptionScreen({super.key});
@@ -15,27 +13,23 @@ class PrescriptionScreen extends StatefulWidget {
 }
 
 class _PrescriptionScreenState extends State<PrescriptionScreen> {
+  bool _isLoading = true;
   List<Paciente> _pacientes = [];
   Paciente? _pacienteSeleccionado;
-  bool _isLoading = true;
 
-  // Lista de medicamentos prescritos
-  final List<Map<String, String>> _medicamentos = [
+  final List<Map<String, dynamic>> _medicamentos = [
     {
       'nombre': 'Ibuprofeno 600mg',
       'dosis': '1 tableta',
-      'frecuencia': 'cada 8 horas',
-      'duracion': 'por 5 días',
-    },
+      'frecuencia_horas': 8,
+      'dias': 5,
+      'indicaciones': 'Tomar después de las comidas principal para inflamación ATM',
+    }
   ];
 
-  final TextEditingController _indicacionesController = TextEditingController(
-    text: 'Tomar con los alimentos. Evitar masticar alimentos duros sobre el lado afectado.',
+  final TextEditingController _indicacionesGeneralesController = TextEditingController(
+    text: 'Mantener reposo mandibular, dieta blanda por 7 días y evitar masticar hielo o chicle.',
   );
-  final TextEditingController _doctorNombreController = TextEditingController(text: 'Dr. Ludin Solís');
-  final TextEditingController _doctorColegiadoController = TextEditingController(text: 'Col. Odontólogos #14890');
-
-  double _btnScale = 1.0;
 
   @override
   void initState() {
@@ -43,83 +37,58 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     _cargarPacientes();
   }
 
-  @override
-  void dispose() {
-    _indicacionesController.dispose();
-    _doctorNombreController.dispose();
-    _doctorColegiadoController.dispose();
-    super.dispose();
-  }
-
   Future<void> _cargarPacientes() async {
     setState(() => _isLoading = true);
     try {
       final supabase = Supabase.instance.client;
-      final response = await supabase.from('pacientes').select();
-      final list = (response as List)
-          .map((map) => Paciente.fromMap(Map<String, dynamic>.from(map), map['id'].toString()))
+      final res = await supabase.from('pacientes').select();
+      final list = (res as List)
+          .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
           .toList();
 
       setState(() {
         _pacientes = list;
         if (list.isNotEmpty) {
           _pacienteSeleccionado = list.first;
-        } else {
-          // Paciente demo de respaldo
-          _pacienteSeleccionado = Paciente(
-            id: 'paciente_demo',
-            nombre: 'Juan',
-            apellido: 'Pérez',
-            email: 'juan.perez@email.com',
-            telefono: '+50255551234',
-            fechaNacimiento: DateTime(1990, 5, 20),
-            genero: 'Masculino',
-            direccion: 'Ciudad de Guatemala',
-          );
         }
       });
     } catch (e) {
-      debugPrint('Error al cargar pacientes: $e');
+      debugPrint('Error al cargar pacientes en Receta: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _agregarMedicamento() {
-    final nombreController = TextEditingController();
-    final dosisController = TextEditingController(text: '1 tableta');
-    final frecuenciaController = TextEditingController(text: 'cada 8 horas');
-    final duracionController = TextEditingController(text: 'por 5 días');
+  void _abrirModalAgregarMedicamento() {
+    final nombreCtrl = TextEditingController();
+    final dosisCtrl = TextEditingController(text: '1 tableta');
+    final horasCtrl = TextEditingController(text: '8');
+    final diasCtrl = TextEditingController(text: '5');
+    final obsCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Agregar Medicamento', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Agregar Medicamento a Receta', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: nombreController,
-                decoration: _inputDecoration('Nombre del medicamento (ej: Amoxicilina 500mg)'),
+              TextField(controller: nombreCtrl, decoration: _inputDecoration('Nombre de medicamento (ej: Amoxicilina 500mg)')),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: dosisCtrl, decoration: _inputDecoration('Dosis (ej: 1 cápsula)'))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: horasCtrl, keyboardType: TextInputType.number, decoration: _inputDecoration('Cada (horas)'))),
+                ],
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: dosisController,
-                decoration: _inputDecoration('Dosis / Cantidad (ej: 1 cápsula)'),
-              ),
+              TextField(controller: diasCtrl, keyboardType: TextInputType.number, decoration: _inputDecoration('Por cuantos días')),
               const SizedBox(height: 12),
-              TextField(
-                controller: frecuenciaController,
-                decoration: _inputDecoration('Frecuencia (ej: cada 12 horas)'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: duracionController,
-                decoration: _inputDecoration('Duración (ej: por 7 días)'),
-              ),
+              TextField(controller: obsCtrl, decoration: _inputDecoration('Indicación específica')),
             ],
           ),
         ),
@@ -130,13 +99,14 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (nombreController.text.trim().isNotEmpty) {
+              if (nombreCtrl.text.trim().isNotEmpty) {
                 setState(() {
                   _medicamentos.add({
-                    'nombre': nombreController.text.trim(),
-                    'dosis': dosisController.text.trim(),
-                    'frecuencia': frecuenciaController.text.trim(),
-                    'duracion': duracionController.text.trim(),
+                    'nombre': nombreCtrl.text.trim(),
+                    'dosis': dosisCtrl.text.trim(),
+                    'frecuencia_horas': int.tryParse(horasCtrl.text.trim()) ?? 8,
+                    'dias': int.tryParse(diasCtrl.text.trim()) ?? 5,
+                    'indicaciones': obsCtrl.text.trim(),
                   });
                 });
                 Navigator.pop(ctx);
@@ -154,188 +124,66 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     );
   }
 
-  Future<void> _guardarYCompartirReceta() async {
-    if (_pacienteSeleccionado == null || _medicamentos.isEmpty) return;
+  Future<void> _guardarYEnviarReceta({bool viaWhatsApp = false}) async {
+    if (_pacienteSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona un paciente primero'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
-    setState(() => _isLoading = true);
-
-    final String recetaId = 'receta_${DateTime.now().millisecondsSinceEpoch}';
-    final String fechaStr = DateTime.now().toString().split(' ')[0];
+    final supabase = Supabase.instance.client;
+    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
 
     final recetaData = {
-      'id': recetaId,
+      'id': 'receta_${DateTime.now().millisecondsSinceEpoch}',
       'paciente_id': _pacienteSeleccionado!.id,
       'paciente_nombre': '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
-      'doctor_nombre': _doctorNombreController.text.trim(),
-      'fecha': fechaStr,
+      'fecha': DateTime.now().toIso8601String(),
       'medicamentos': _medicamentos,
-      'indicaciones': _indicacionesController.text.trim(),
-      'firma_digital': '${_doctorNombreController.text.trim()} - ${_doctorColegiadoController.text.trim()}',
+      'indicaciones_generales': _indicacionesGeneralesController.text.trim(),
+      'doctor_nombre': doctorRes?['name'] ?? 'Dr. Rizo Dental',
+      'firma_digital': doctorRes?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal',
     };
 
-    // Guardar en Supabase
     try {
-      final supabase = Supabase.instance.client;
       await supabase.from('recetas').upsert(recetaData);
     } catch (e) {
       debugPrint('Error al guardar receta en Supabase: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
 
     if (!mounted) return;
 
-    // Diálogo Opciones de Envío (WhatsApp, PDF, Impresión)
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(28),
-        decoration: const BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Receta Médica Guardada en Supabase',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Paciente: ${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
-              style: const TextStyle(fontSize: 13, color: AppColors.textLight),
-            ),
-            const SizedBox(height: 24),
+    if (viaWhatsApp) {
+      final tel = _pacienteSeleccionado!.telefono;
+      final nombre = '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}';
+      final buffer = StringBuffer();
+      buffer.writeln('📋 *RECETA MÉDICA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('Paciente: $nombre');
+      buffer.writeln('Fecha: ${DateTime.now().toString().split(' ')[0]}');
+      buffer.writeln('\n*Medicamentos Prescritos:*');
+      for (var m in _medicamentos) {
+        buffer.writeln('• ${m['nombre']} - ${m['dosis']} cada ${m['frecuencia_horas']} hrs por ${m['dias']} días.');
+      }
+      if (_indicacionesGeneralesController.text.isNotEmpty) {
+        buffer.writeln('\n*Indicaciones:* ${_indicacionesGeneralesController.text.trim()}');
+      }
+      buffer.writeln('\n_Dr. ${doctorRes?["name"] ?? "Rizo Dental"}_');
 
-            // Opción 1: Enviar por WhatsApp
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFF25D366).withOpacity(0.12), shape: BoxShape.circle),
-                child: const Icon(Icons.send_to_mobile, color: Color(0xFF25D366)),
-              ),
-              title: const Text('Enviar Receta por WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Abre WhatsApp con el resumen de la receta', style: TextStyle(fontSize: 12)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final String tel = _pacienteSeleccionado!.telefono.replaceAll(RegExp(r'[^\d+]'), '');
-                final String msg = Uri.encodeComponent(
-                  '📋 *RIZO DENTAL - RECETA MÉDICA*\n'
-                  'Paciente: ${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}\n'
-                  'Fecha: $fechaStr\n\n'
-                  '💊 *MEDICAMENTOS PRESCRITOS:*\n'
-                  '${_medicamentos.map((m) => "• ${m['nombre']} - ${m['dosis']} ${m['frecuencia']} ${m['duracion']}").join("\n")}\n\n'
-                  '📝 *INDICACIONES:*\n${_indicacionesController.text.trim()}\n\n'
-                  '👨‍⚕️ *Firma:* ${_doctorNombreController.text.trim()} (${_doctorColegiadoController.text.trim()})',
-                );
-                final Uri waUri = Uri.parse('https://wa.me/$tel?text=$msg');
-                if (await canLaunchUrl(waUri)) {
-                  await launchUrl(waUri, mode: LaunchMode.externalApplication);
-                } else {
-                  await _generarPDFReceta(recetaData);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
+      final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
+      final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
 
-            // Opción 2: Compartir Documento PDF Oficial
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
-                child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
-              ),
-              title: const Text('Compartir PDF Oficial', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Genera PDF membretado con firma digital para compartir', style: TextStyle(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _generarPDFReceta(recetaData);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _generarPDFReceta(Map<String, dynamic> receta) async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('The Clinical Sanctuary • RECETA MÉDICA', style: const pw.TextStyle(fontSize: 12)),
-                        pw.Text('Dr: ${_doctorNombreController.text} | ${_doctorColegiadoController.text}', style: const pw.TextStyle(fontSize: 11)),
-                      ],
-                    ),
-                    pw.Text('Fecha: ${receta['fecha']}', style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.Divider(),
-                pw.SizedBox(height: 16),
-                pw.Text('PACIENTE: ${receta['paciente_nombre']}', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 20),
-                pw.Text('RP / MEDICAMENTOS PRESCRITOS:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 10),
-                for (var med in _medicamentos)
-                  pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 8),
-                    padding: const pw.EdgeInsets.all(12),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.grey100,
-                      borderRadius: pw.BorderRadius.circular(8),
-                    ),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('${med['nombre']}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('${med['dosis']} | ${med['frecuencia']} | ${med['duracion']}'),
-                      ],
-                    ),
-                  ),
-                pw.SizedBox(height: 20),
-                pw.Text('INDICACIONES CLÍNICAS:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 6),
-                pw.Text('${receta['indicaciones']}'),
-                pw.Spacer(),
-                pw.Divider(),
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      pw.Text('FIRMA Y SELLO DIGITAL CERTIFICADO', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                      pw.Text('${receta['firma_digital']}', style: const pw.TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'receta_rizo_dental_${receta['id']}.pdf',
-    );
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
+      }
+    } else {
+      await PdfGenerator.generarPdfReceta(
+        paciente: _pacienteSeleccionado!,
+        medicamentos: _medicamentos,
+        indicaciones: _indicacionesGeneralesController.text.trim(),
+        doctorInfo: doctorRes,
+      );
+    }
   }
 
   InputDecoration _inputDecoration(String label) {
@@ -386,7 +234,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                   ),
                 ),
                 Text(
-                  'Emisión de Receta Médica',
+                  'Emisión de Recetas Médicas',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -405,51 +253,46 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Patient Selection Card
+                    // Patient Selector Card
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: const [
-                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 24, offset: Offset(0, 8)),
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '1. Seleccionar Paciente',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                          ),
-                          const SizedBox(height: 12),
+                          const Text('1. Paciente Destinatario:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                          const SizedBox(height: 8),
                           DropdownButtonFormField<Paciente>(
                             value: _pacienteSeleccionado,
-                            decoration: _inputDecoration('Paciente'),
+                            decoration: _inputDecoration('Seleccionar Paciente de la Clínica'),
                             dropdownColor: AppColors.surfaceContainerLowest,
                             items: _pacientes.map((p) {
-                              return DropdownMenuItem<Paciente>(
+                              return DropdownMenuItem(
                                 value: p,
                                 child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
                               );
                             }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _pacienteSeleccionado = val);
-                            },
+                            onChanged: (val) => setState(() => _pacienteSeleccionado = val),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
-                    // Prescription List Card
+                    // Medications List Card
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: const [
-                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 24, offset: Offset(0, 8)),
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                         ],
                       ),
                       child: Column(
@@ -458,150 +301,109 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                '2. Medicamentos (Rp)',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                              ),
+                              const Text('2. Prescripción de Medicamentos:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
                               IconButton(
-                                icon: const Icon(Icons.add_circle, color: AppColors.primary, size: 28),
-                                tooltip: 'Agregar Medicamento',
-                                onPressed: _agregarMedicamento,
+                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                onPressed: _abrirModalAgregarMedicamento,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          if (_medicamentos.isEmpty)
-                            const Text('No has agregado medicamentos a la receta.', style: TextStyle(color: AppColors.textLight)),
-                          ..._medicamentos.asMap().entries.map((entry) {
-                            final idx = entry.key;
-                            final med = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
+                          const SizedBox(height: 8),
+                          for (var i = 0; i < _medicamentos.length; i++)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceContainerLow,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                                    child: const Icon(Icons.medication_outlined, color: AppColors.primary, size: 20),
-                                  ),
-                                  const SizedBox(width: 12),
+                                  const Icon(Icons.medication_liquid_outlined, color: AppColors.primary),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(med['nombre']!, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                                        Text(
-                                          '${med['dosis']} • ${med['frecuencia']} • ${med['duracion']}',
-                                          style: const TextStyle(fontSize: 12, color: AppColors.textLight),
-                                        ),
+                                        Text('${_medicamentos[i]['nombre']} (${_medicamentos[i]['dosis']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        Text('Cada ${_medicamentos[i]['frecuencia_horas']} hrs por ${_medicamentos[i]['dias']} días', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
                                       ],
                                     ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
                                     onPressed: () {
-                                      setState(() => _medicamentos.removeAt(idx));
+                                      setState(() {
+                                        _medicamentos.removeAt(i);
+                                      });
                                     },
                                   ),
                                 ],
                               ),
-                            );
-                          }),
+                            ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
-                    // Doctor Signature & Additional Notes Card
+                    // General Indications Card
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: const [
-                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 24, offset: Offset(0, 8)),
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '3. Indicaciones & Firma del Especialista',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _indicacionesController,
-                            maxLines: 2,
-                            style: const TextStyle(color: AppColors.onSurface),
-                            decoration: _inputDecoration('Indicaciones del tratamiento'),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _doctorNombreController,
-                                  style: const TextStyle(color: AppColors.onSurface),
-                                  decoration: _inputDecoration('Nombre del Especialista'),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _doctorColegiadoController,
-                                  style: const TextStyle(color: AppColors.onSurface),
-                                  decoration: _inputDecoration('No. Colegiado'),
-                                ),
-                              ),
-                            ],
+                          const Text('3. Indicaciones y Cuidados Especiales:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _indicacionesGeneralesController,
+                            maxLines: 3,
+                            decoration: _inputDecoration('Indicaciones generales para el paciente'),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
-                    // Primary Action Button (Linear Gradient & Scale Animation)
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _btnScale = 0.98),
-                      onTapUp: (_) => setState(() => _btnScale = 1.0),
-                      onTapCancel: () => setState(() => _btnScale = 1.0),
-                      child: AnimatedScale(
-                        scale: _btnScale,
-                        duration: const Duration(milliseconds: 120),
-                        child: Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.primaryContainer],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: const [
-                              BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
-                            ],
-                          ),
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : _guardarYCompartirReceta,
-                            icon: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
-                            label: const Text(
-                              'Emitir Receta & Enviar por WhatsApp / PDF',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                              label: const Text('Exportar PDF Rizo', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                              onPressed: () => _guardarYEnviarReceta(viaWhatsApp: false),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.send_to_mobile, color: Colors.white),
+                              label: const Text('Enviar WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                              onPressed: () => _guardarYEnviarReceta(viaWhatsApp: true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

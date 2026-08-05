@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
+import '../utils/pdf_generator.dart';
 
 class FonsecaTestScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -152,7 +151,6 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         ? '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}'
         : 'Paciente General';
 
-    // Guardar en Supabase vinculado al paciente seleccionado
     final supabase = Supabase.instance.client;
     
     final evaluacionData = {
@@ -176,7 +174,6 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
 
     if (!mounted) return;
 
-    // Diálogo Rizo Dental "The Clinical Sanctuary"
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -261,8 +258,8 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                 height: 48,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.picture_as_pdf, size: 20, color: AppColors.primary),
-                  label: const Text('Exportar PDF al Paciente', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  onPressed: () => _generatePdf(score, diagnosis, pacienteNombre),
+                  label: const Text('Exportar PDF Rizo Dental', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  onPressed: () => _generatePdf(score, diagnosis),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -300,63 +297,19 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     );
   }
 
-  void _generatePdf(int score, String diagnosis, String pacienteNombre) async {
-    final pdf = pw.Document();
-    final fechaStr = DateTime.now().toString().split(' ')[0];
+  void _generatePdf(int score, String diagnosis) async {
+    final supabase = Supabase.instance.client;
+    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
 
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('The Clinical Sanctuary • TEST ANAMNÉSICO FONSECA ATM', style: const pw.TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    pw.Text('Fecha: $fechaStr', style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.Divider(),
-                pw.SizedBox(height: 16),
-                pw.Text('PACIENTE: $pacienteNombre', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 16),
-                pw.Text('RESULTADO DEL DIAGNÓSTICO:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 8),
-                pw.Text('Puntuación Total: $score / 100 Puntos', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Clasificación: $diagnosis', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 20),
-                pw.Text('PREGUNTAS Y RESPUESTAS CLÍNICAS:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 10),
-                for (var i = 0; i < _questions.length; i++)
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 6),
-                    child: pw.Text('${i + 1}. ${_questions[i]['question']} -> ${_questions[i]['answer'] ?? "No respondido"}'),
-                  ),
-                pw.Spacer(),
-                pw.Divider(),
-                pw.Center(
-                  child: pw.Text('Rizo Dental Sanctuary • Expediente Clínico de Paciente', style: const pw.TextStyle(fontSize: 10)),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'test_fonseca_${_pacienteSeleccionado?.id ?? "paciente"}.pdf',
-    );
+    if (_pacienteSeleccionado != null) {
+      await PdfGenerator.generarPdfFonseca(
+        paciente: _pacienteSeleccionado!,
+        score: score,
+        diagnostico: diagnosis,
+        preguntas: _questions,
+        doctorInfo: doctorRes,
+      );
+    }
   }
 
   void _selectAnswer(String answer) {

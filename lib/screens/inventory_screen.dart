@@ -41,90 +41,115 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _abrirModalAgregarEditar({Map<String, dynamic>? item}) {
     final nombreController = TextEditingController(text: item?['nombre'] ?? '');
-    final categoriaController = TextEditingController(text: item?['categoria'] ?? 'Medicamentos');
+    String categoria = item?['categoria'] ?? 'Medicamentos';
+    if (!['Medicamentos', 'Instrumental', 'Insumos / Materiales'].contains(categoria)) {
+      categoria = 'Medicamentos';
+    }
     final cantidadController = TextEditingController(text: item?['cantidad']?.toString() ?? '10');
     final unidadController = TextEditingController(text: item?['unidad'] ?? 'unidades');
     final minController = TextEditingController(text: item?['stock_minimo']?.toString() ?? '5');
+    bool saving = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          item == null ? 'Nuevo Ítem de Inventario' : 'Editar Ítem',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nombreController, decoration: _inputDecoration('Nombre del artículo / medicamento')),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: ['Medicamentos', 'Instrumental', 'Insumos / Materiales'].contains(categoriaController.text)
-                    ? categoriaController.text
-                    : 'Medicamentos',
-                decoration: _inputDecoration('Categoría'),
-                dropdownColor: AppColors.surfaceContainerLowest,
-                items: const [
-                  DropdownMenuItem(value: 'Medicamentos', child: Text('Medicamentos')),
-                  DropdownMenuItem(value: 'Instrumental', child: Text('Instrumental Odontológico')),
-                  DropdownMenuItem(value: 'Insumos / Materiales', child: Text('Insumos / Materiales')),
-                ],
-                onChanged: (val) {
-                  if (val != null) categoriaController.text = val;
-                },
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: cantidadController, keyboardType: TextInputType.number, decoration: _inputDecoration('Cantidad'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextField(controller: unidadController, decoration: _inputDecoration('Unidad (ej: cajas)'))),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(controller: minController, keyboardType: TextInputType.number, decoration: _inputDecoration('Stock Mínimo de Alerta')),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateModal) => AlertDialog(
+          backgroundColor: AppColors.surfaceContainerLowest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            item == null ? 'Nuevo Ítem de Inventario' : 'Editar Ítem',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nombreController.text.trim().isNotEmpty) {
-                final id = item?['id'] ?? 'inv_${DateTime.now().millisecondsSinceEpoch}';
-                final itemData = {
-                  'id': id,
-                  'nombre': nombreController.text.trim(),
-                  'categoria': categoriaController.text.trim(),
-                  'cantidad': int.tryParse(cantidadController.text.trim()) ?? 0,
-                  'unidad': unidadController.text.trim(),
-                  'stock_minimo': int.tryParse(minController.text.trim()) ?? 5,
-                };
-
-                try {
-                  final supabase = Supabase.instance.client;
-                  await supabase.from('inventario').upsert(itemData);
-                  Navigator.pop(ctx);
-                  _cargarInventario();
-                } catch (e) {
-                  debugPrint('Error al guardar en inventario: $e');
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nombreController, decoration: _inputDecoration('Nombre del artículo / medicamento')),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: categoria,
+                  decoration: _inputDecoration('Categoría'),
+                  dropdownColor: AppColors.surfaceContainerLowest,
+                  items: const [
+                    DropdownMenuItem(value: 'Medicamentos', child: Text('Medicamentos')),
+                    DropdownMenuItem(value: 'Instrumental', child: Text('Instrumental Odontológico')),
+                    DropdownMenuItem(value: 'Insumos / Materiales', child: Text('Insumos / Materiales')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setStateModal(() => categoria = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: cantidadController, keyboardType: TextInputType.number, decoration: _inputDecoration('Cantidad'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: TextField(controller: unidadController, decoration: _inputDecoration('Unidad (ej: cajas)'))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: minController, keyboardType: TextInputType.number, decoration: _inputDecoration('Stock Mínimo de Alerta')),
+              ],
             ),
-            child: const Text('Guardar en Supabase'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
+            ),
+            ElevatedButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (nombreController.text.trim().isEmpty) return;
+
+                      setStateModal(() => saving = true);
+                      final id = item?['id'] ?? 'inv_${DateTime.now().millisecondsSinceEpoch}';
+                      final itemData = {
+                        'id': id,
+                        'nombre': nombreController.text.trim(),
+                        'categoria': categoria,
+                        'cantidad': int.tryParse(cantidadController.text.trim()) ?? 0,
+                        'unidad': unidadController.text.trim(),
+                        'stock_minimo': int.tryParse(minController.text.trim()) ?? 5,
+                      };
+
+                      try {
+                        final supabase = Supabase.instance.client;
+                        await supabase.from('inventario').upsert(itemData);
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        _cargarInventario();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('¡Ítem "${nombreController.text.trim()}" guardado en Supabase!'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      } catch (e) {
+                        debugPrint('Error al guardar en inventario: $e');
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al guardar: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      } finally {
+                        setStateModal(() => saving = false);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: saving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Guardar en Supabase'),
+            ),
+          ],
+        ),
       ),
     );
   }
