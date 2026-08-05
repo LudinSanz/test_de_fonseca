@@ -11,6 +11,7 @@ import '../models/reporte.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'help_screen.dart';
+import 'patient_history_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
 import '../constants/colors.dart';
@@ -757,32 +758,50 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Secondary Outlined History Button (Ghost Outline & Glass Pill)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: _showReports,
-                        icon: const Icon(Icons.history, size: 20, color: AppColors.primary),
-                        label: const Text(
-                          'Ver Historial de Diagnósticos',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                    // Secondary Outlined History Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _showReports,
+                            icon: const Icon(Icons.history, size: 18, color: AppColors.primary),
+                            label: const Text(
+                              'Diagnósticos',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: AppColors.surfaceContainerLowest,
+                              side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
                           ),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: AppColors.surfaceContainerLowest,
-                          side: const BorderSide(
-                            color: AppColors.ghostOutline,
-                            width: 1.2,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientHistoryScreen()));
+                            },
+                            icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Colors.white),
+                            label: const Text(
+                              'Histórico 360°',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -804,18 +823,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSpacing: 14,
                 childAspectRatio: 1.25,
                 children: [
-                  // Card 1: Receta Médica
+                  // Card 1: Histórico 360° del Paciente
+                  _buildDashboardModuleCard(
+                    title: 'Histórico 360°',
+                    subtitle: 'Test, Recetas & Citas',
+                    icon: Icons.folder_shared_outlined,
+                    color: AppColors.primary,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientHistoryScreen()));
+                    },
+                  ),
+
+                  // Card 2: Receta Médica
                   _buildDashboardModuleCard(
                     title: 'Receta Médica',
                     subtitle: 'Firma digital & WhatsApp',
                     icon: Icons.medical_services_outlined,
-                    color: AppColors.primary,
+                    color: const Color(0xFF0056B3),
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const PrescriptionScreen()));
                     },
                   ),
 
-                  // Card 2: Inventario
+                  // Card 3: Inventario
                   _buildDashboardModuleCard(
                     title: 'Inventario Clínico',
                     subtitle: 'Insumos & Alertas Stock',
@@ -826,7 +856,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // Card 3: Gestión de Citas
+                  // Card 4: Gestión de Citas
                   _buildDashboardModuleCard(
                     title: 'Gestión de Citas',
                     subtitle: 'Agenda & Recordatorios WA',
@@ -834,17 +864,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFF983C00),
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AppointmentsScreen()));
-                    },
-                  ),
-
-                  // Card 4: Perfil Profesional
-                  _buildDashboardModuleCard(
-                    title: 'Perfil Doctor',
-                    subtitle: 'Membrete & Colegiado',
-                    icon: Icons.person_pin_outlined,
-                    color: const Color(0xFF5B3E96),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
                     },
                   ),
                 ],
