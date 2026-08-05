@@ -18,7 +18,6 @@ class PatientHistoryScreen extends StatefulWidget {
 
 class _PatientHistoryScreenState extends State<PatientHistoryScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
 
   List<Paciente> _pacientes = [];
   Paciente? _pacienteSeleccionado;
@@ -39,7 +38,6 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -158,7 +156,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
               ),
             ),
             Text(
-              'Histórico Clínico del Paciente',
+              'Histórico Clínico 360° del Paciente',
               style: TextStyle(fontSize: 11, color: AppColors.textLight),
             ),
           ],
@@ -187,7 +185,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Seleccionar Paciente',
+                        'Seleccionar Expediente del Paciente',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -234,7 +232,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                 ),
 
                 if (_pacienteSeleccionado != null) ...[
-                  // Patient Info Banner
+                  // Patient Profile Banner
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     padding: const EdgeInsets.all(18),
@@ -496,11 +494,16 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                 child: OutlinedButton.icon(
                   onPressed: () {
                     PdfGenerator.generarPdfFonseca(
-                      pacienteNombre: '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
+                      paciente: _pacienteSeleccionado!,
                       score: score,
                       diagnostico: diagnostico,
-                      respuestas: const {},
-                      doctorNombre: 'Dra. María Rizo',
+                      preguntas: const [],
+                      doctorInfo: const {
+                        'name': 'Dra. María Rizo',
+                        'colegiado': '12345',
+                        'especialidad': 'Especialista ATM & Odontología',
+                        'firma_digital': 'Firma Digital Rizo Dental',
+                      },
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
@@ -531,7 +534,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
         final String fecha = receta['fecha'] != null
             ? receta['fecha'].toString().split('T')[0]
             : (receta['created_at'] != null ? receta['created_at'].toString().split('T')[0] : 'Fecha Reciente');
-        final String medicamentos = receta['medicamentos'] ?? 'Medicamentos prescritos';
+        final String medicamentosTexto = receta['medicamentos'] ?? 'Medicamentos prescritos';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -578,7 +581,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  medicamentos,
+                  medicamentosTexto,
                   style: const TextStyle(fontSize: 13, color: AppColors.onSurface, height: 1.4),
                 ),
               ),
@@ -588,11 +591,22 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                 child: OutlinedButton.icon(
                   onPressed: () {
                     PdfGenerator.generarPdfReceta(
-                      pacienteNombre: '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
-                      colegiado: '12345',
-                      medicamentos: medicamentos,
+                      paciente: _pacienteSeleccionado!,
+                      medicamentos: [
+                        {
+                          'nombre': 'Prescripción Médica Rizo Dental',
+                          'dosis': medicamentosTexto,
+                          'frecuencia': receta['indicaciones'] ?? 'Según indicación',
+                          'duracion': 'Ver indicación'
+                        }
+                      ],
                       indicaciones: receta['indicaciones'] ?? 'Tomar según prescripción clínica.',
-                      doctorNombre: 'Dra. María Rizo',
+                      doctorInfo: const {
+                        'name': 'Dra. María Rizo',
+                        'colegiado': '12345',
+                        'especialidad': 'Especialista ATM & Odontología',
+                        'firma_digital': 'Firma Digital Rizo Dental',
+                      },
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
@@ -682,11 +696,17 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                 child: OutlinedButton.icon(
                   onPressed: () {
                     PdfGenerator.generarPdfCita(
-                      pacienteNombre: '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
+                      paciente: _pacienteSeleccionado!,
                       fechaHora: '$fecha a las $hora',
                       motivo: motivo,
                       notas: 'Por favor asistir 10 minutos antes a la clínica Rizo Dental.',
-                      doctorNombre: 'Dra. María Rizo',
+                      estado: estado,
+                      doctorInfo: const {
+                        'name': 'Dra. María Rizo',
+                        'colegiado': '12345',
+                        'especialidad': 'Especialista ATM & Odontología',
+                        'firma_digital': 'Firma Digital Rizo Dental',
+                      },
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
