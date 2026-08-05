@@ -143,12 +143,35 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar paciente: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        final String errMsg = e.toString();
+        if (errMsg.contains('row-level security') || errMsg.contains('42501')) {
+          showDialog(
+            context: context,
+            builder: (dialogCtx) => AlertDialog(
+              backgroundColor: AppColors.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Permisos de Supabase (RLS)', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+              content: const Text(
+                'La tabla "pacientes" en Supabase tiene activada la política de seguridad RLS.\n\nPara permitir guardar expedientes de pacientes desde la app, debes ejecutar esta línea en el Editor SQL de tu Supabase:\n\nALTER TABLE public.pacientes DISABLE ROW LEVEL SECURITY;',
+                style: TextStyle(fontSize: 13, color: AppColors.onSurface),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: const Text('Entendido', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al guardar paciente: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
