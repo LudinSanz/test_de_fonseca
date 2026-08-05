@@ -508,15 +508,39 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Fecha de Nacimiento
-            GestureDetector(
+            // Seleccionar Fecha de Nacimiento
+            InkWell(
               onTap: () => _selectFechaNacimiento(context),
-              child: AbsorbPointer(
-                child: TextFormField(
-                  decoration: _inputDecoration(
-                    'Fecha de Nacimiento: ${_fechaNacimiento.day}/${_fechaNacimiento.month}/${_fechaNacimiento.year}',
-                    Icons.calendar_today_outlined,
-                  ),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.ghostOutline, width: 1.0),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_month_outlined, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Fecha de Nacimiento del Paciente',
+                            style: TextStyle(fontSize: 11, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_fechaNacimiento.day.toString().padLeft(2, '0')} / ${_fechaNacimiento.month.toString().padLeft(2, '0')} / ${_fechaNacimiento.year}',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.edit_calendar_outlined, color: AppColors.primary, size: 20),
+                  ],
                 ),
               ),
             ),
