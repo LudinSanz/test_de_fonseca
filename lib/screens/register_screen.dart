@@ -92,17 +92,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Registro exitoso!'),
+          SnackBar(
+            content: Text('¡Cuenta creada exitosamente! Bienvenido(a) ${user.name}'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
-        // Redirigir a la pantalla de login y evitar volver atrás
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

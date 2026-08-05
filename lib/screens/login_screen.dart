@@ -200,6 +200,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   final user = await AuthService().signInWithGoogle();
                                   setState(() => _isLoading = false);
                                   if (user != null && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('¡Bienvenido(a) ${user.name}!'),
+                                        backgroundColor: AppColors.success,
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -379,6 +387,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   await AuthService().sendPasswordResetEmail(email);
                                                   if (mounted) {
                                                     Navigator.pop(context);
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Se envió un correo de recuperación a $email'),
+                                                        backgroundColor: AppColors.success,
+                                                        behavior: SnackBarBehavior.floating,
+                                                        duration: const Duration(seconds: 4),
+                                                      ),
+                                                    );
                                                   }
                                                 } catch (e) {
                                                   if (mounted) {

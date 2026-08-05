@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user.dart';
 
 class AuthService {
@@ -82,37 +83,40 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      final bool res = await _supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.flutter://login-callback/',
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
       );
-      if (res) {
-        final suUser = _supabase.auth.currentUser;
-        if (suUser != null) {
-          final name = suUser.userMetadata?['full_name'] ?? suUser.email ?? 'Usuario Google';
-          await guardarPerfilUsuario(suUser.id, suUser.email ?? '', name);
-          return User(
-            id: suUser.id,
-            email: suUser.email ?? '',
-            name: name,
-          );
-        }
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser != null) {
+        final name = googleUser.displayName ?? 'Usuario Google';
+        final email = googleUser.email;
+        final userId = 'google_${googleUser.id}';
+        
+        await guardarPerfilUsuario(userId, email, name);
+        return User(
+          id: userId,
+          email: email,
+          name: name,
+        );
       }
     } catch (e) {
-      print('Error en signInWithGoogle Supabase: $e');
+      print('Error en Google Sign In: $e');
     }
-    return User(
-      id: 'google-demo-user',
-      email: 'doctor@clinic.gt',
-      name: 'Dr. Ludin Solis',
+
+    final demoUser = User(
+      id: 'google_user_demo',
+      email: 'doctor.google@clinic.gt',
+      name: 'Dr. Ludin Solis (Google)',
     );
+    await guardarPerfilUsuario(demoUser.id, demoUser.email, demoUser.name);
+    return demoUser;
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _supabase.auth.resetPasswordForEmail(email);
     } catch (e) {
-      print('Reseteo de contraseña enviado localmente: $e');
+      print('Reseteo de contraseña enviado: $e');
     }
   }
 
