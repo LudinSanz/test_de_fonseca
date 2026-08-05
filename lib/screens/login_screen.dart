@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null && mounted) {
-        // Verificar si el usuario con Google existe previamente en la tabla users de Supabase
+        // Consultar si el correo de Google ya existe en la tabla 'users' de Supabase
         final supabase = Supabase.instance.client;
         final existingUser = await supabase
             .from('users')
@@ -133,6 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
             .maybeSingle();
 
         if (existingUser != null) {
+          // B) SI YA EXISTE EL CORREO -> Dejar entrar al instante
           final nombrePerfil = existingUser['name'] ?? user.name;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -147,9 +148,24 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          // Si NO existe en la base de datos de la clínica -> Denegar acceso
-          await supabase.auth.signOut();
-          _mostrarDialogoNoRegistrado(user.email);
+          // A) SI ES PRIMERA VEZ EL CORREO -> Llevar a registro prellenado para completar y guardar
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Primera vez ingresando con Google. Por favor completa tus datos de registro.'),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RegisterScreen(
+                initialName: user.name,
+                initialEmail: user.email,
+              ),
+            ),
+          );
         }
       }
     } catch (e) {

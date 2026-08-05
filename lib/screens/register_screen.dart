@@ -5,15 +5,22 @@ import '../constants/colors.dart';
 import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? initialName;
+  final String? initialEmail;
+
+  const RegisterScreen({
+    super.key,
+    this.initialName,
+    this.initialEmail,
+  });
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
   final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
   final TextEditingController _colegiadoController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
@@ -26,6 +33,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   double _buttonScale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _emailController = TextEditingController(text: widget.initialEmail ?? '');
+  }
 
   @override
   void dispose() {
@@ -116,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'firma_digital': '${_nameController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
           });
         } catch (e1) {
-          // Nivel 2: Si la tabla 'users' no tiene las columnas personalizadas, guardar sólo id, name, email
+          // Nivel 2: Guardado de respaldo
           try {
             await supabase.from('users').upsert({
               'id': user.id,
@@ -124,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'email': _emailController.text.trim(),
             });
           } catch (e2) {
-            debugPrint('Nota: Usuario registrado en Supabase Auth. La tabla users omitió campos no soportados.');
+            debugPrint('Nota: Usuario registrado en Supabase Auth.');
           }
         }
 
@@ -132,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('¡Cuenta creada exitosamente! Bienvenido(a) ${user.name}'),
+            content: Text('¡Cuenta creada y registrada en Supabase! Bienvenido(a) ${user.name}'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
