@@ -1,12 +1,10 @@
-import 'profile_screen.dart';
-import 'notifications_screen.dart';
-import 'help_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/configuracion_app.dart';
+import '../theme_provider.dart';
+import '../constants/colors.dart';
+import 'profile_screen.dart';
+import 'help_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,241 +14,204 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  Future<Map<String, dynamic>?> _getUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return null;
-    final res = await Supabase.instance.client
-        .from('users')
-        .select()
-        .eq('id', user.id)
-        .maybeSingle();
-    return res != null ? Map<String, dynamic>.from(res) : null;
-  }
-
-  ConfiguracionApp? _configuracionApp;
-  bool _loadingConfig = true;
-  String? _configError;
+  bool _isLoading = true;
+  bool _notificacionesActivas = true;
 
   @override
   void initState() {
     super.initState();
-    _loadConfiguracionApp();
+    _cargarConfiguracionSupabase();
   }
 
-  Future<void> _loadConfiguracionApp() async {
-    setState(() {
-      _loadingConfig = true;
-      _configError = null;
-    });
+  Future<void> _cargarConfiguracionSupabase() async {
+    setState(() => _isLoading = true);
     try {
-      final data = await Supabase.instance.client
+      final res = await Supabase.instance.client
           .from('configuracion')
           .select()
           .eq('id', 'global')
           .maybeSingle();
-      if (data != null) {
+
+      if (res != null) {
         setState(() {
-          _configuracionApp = ConfiguracionApp.fromMap(Map<String, dynamic>.from(data), data['id'].toString());
-          _loadingConfig = false;
-        });
-      } else {
-        setState(() {
-          _configuracionApp = null;
-          _loadingConfig = false;
+          _notificacionesActivas = res['notificaciones'] ?? true;
         });
       }
     } catch (e) {
-      setState(() {
-        _configError = e.toString();
-        _loadingConfig = false;
-      });
+      debugPrint('Error al cargar configuración de Supabase: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _editarConfiguracionApp() async {
-    if (_configuracionApp == null) return;
-    final TextEditingController versionController = TextEditingController(text: _configuracionApp!.version);
-    final TextEditingController mensajeController = TextEditingController(text: _configuracionApp!.mensajeBienvenida);
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Editar configuración global'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: versionController,
-                decoration: const InputDecoration(labelText: 'Versión'),
-              ),
-              TextField(
-                controller: mensajeController,
-                decoration: const InputDecoration(labelText: 'Mensaje de bienvenida'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final nuevaConfig = ConfiguracionApp(
-                  id: 'global',
-                  version: versionController.text,
-                  mensajeBienvenida: mensajeController.text,
-                  parametros: _configuracionApp!.parametros,
-                );
-                final map = nuevaConfig.toMap();
-                map['id'] = 'global';
-                await Supabase.instance.client.from('configuracion').upsert(map);
-                Navigator.pop(context);
-                _loadConfiguracionApp();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _guardarConfiguracion(bool val) async {
+    setState(() => _notificacionesActivas = val);
+    try {
+      await Supabase.instance.client.from('configuracion').upsert({
+        'id': 'global',
+        'notificaciones': val,
+        'tema': 'light',
+      });
+    } catch (e) {
+      debugPrint('Error al guardar configuración en Supabase: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Configuración'),
-        backgroundColor: isDark ? Colors.grey[900] : Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
-      ),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _getUserData(),
-        builder: (context, snapshot) {
-          final userData = snapshot.data;
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Consumer<ThemeProvider>(
-                builder: (context, themeProvider, _) => SwitchListTile(
-                  title: const Text('Modo oscuro'),
-                  value: themeProvider.isDarkMode,
-                  onChanged: (v) => themeProvider.toggleTheme(),
-                  secondary: const Icon(Icons.dark_mode),
-                ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/rizo_logo.png',
+              height: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.settings_outlined,
+                color: AppColors.primary,
               ),
-              const SizedBox(height: 16),
-              _SettingsCard(
-                icon: Icons.person,
-                title: 'Perfil',
-                subtitle: userData != null ? userData['nombre'] ?? 'Usuario' : 'Cargando...',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              _SettingsCard(
-                icon: Icons.notifications,
-                title: 'Notificaciones',
-                subtitle: 'Gestiona tus preferencias de notificación',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              _SettingsCard(
-                icon: Icons.help_outline,
-                title: 'Ayuda',
-                subtitle: 'Preguntas frecuentes y soporte',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HelpScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-              Card(
-                color: Colors.amber.shade50,
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Configuración global', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: _loadingConfig || _configuracionApp == null ? null : _editarConfiguracionApp,
-                          ),
-                        ],
-                      ),
-                      _loadingConfig
-                          ? const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: LinearProgressIndicator(),
-                            )
-                          : _configError != null
-                              ? Text('Error: '+_configError!, style: const TextStyle(color: Colors.red))
-                              : _configuracionApp != null
-                                  ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Versión: '+_configuracionApp!.version),
-                                        Text('Mensaje: '+_configuracionApp!.mensajeBienvenida),
-                                      ],
-                                    )
-                                  : const Text('No hay configuración global.'),
-                    ],
+            ),
+            const SizedBox(width: 8),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'RIZO DENTAL',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: AppColors.primary,
                   ),
                 ),
+                Text(
+                  'Configuración Global de la Clínica',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                children: [
+                  // Card 1: Tema de la Aplicación
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
+                      ],
+                    ),
+                    child: Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, _) => SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        title: const Text('Modo Oscuro', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                        subtitle: const Text('Cambia el aspecto visual de la aplicación', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                        secondary: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                          child: const Icon(Icons.dark_mode_outlined, color: AppColors.primary),
+                        ),
+                        value: themeProvider.isDarkMode,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => themeProvider.toggleTheme(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Card 2: Notificaciones Supabase
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
+                      ],
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      title: const Text('Notificaciones y Alertas', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                      subtitle: const Text('Recordatorios de citas e inventario bajo', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.notifications_active_outlined, color: AppColors.primary),
+                      ),
+                      value: _notificacionesActivas,
+                      activeColor: AppColors.primary,
+                      onChanged: _guardarConfiguracion,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Card 3: Perfil Profesional del Doctor
+                  _buildSettingsTile(
+                    title: 'Perfil Profesional del Doctor',
+                    subtitle: 'Configura el membrete oficial, colegiado y firma digital',
+                    icon: Icons.person_pin_outlined,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Card 4: Ayuda y Soporte Técnico
+                  _buildSettingsTile(
+                    title: 'Centro de Ayuda & Soporte',
+                    subtitle: 'Guía clínica y contacto con desarrollo Rizo Dental',
+                    icon: Icons.help_outline_rounded,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                    },
+                  ),
+                ],
               ),
-            ],
-          );
-        },
       ),
     );
   }
-}
 
-class _SettingsCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _SettingsCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
+  Widget _buildSettingsTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
+        ],
+      ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade50,
-          child: Icon(icon, color: Colors.blue),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+          child: Icon(icon, color: AppColors.primary),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textLight),
         onTap: onTap,
       ),
     );

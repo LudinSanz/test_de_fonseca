@@ -3,148 +3,301 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../models/reporte.dart';
-import 'package:graphify/graphify.dart';
+import '../constants/colors.dart';
 
 class ReportsScreen extends StatefulWidget {
-  final List<Reporte> reportes;
-  const ReportsScreen({Key? key, required this.reportes}) : super(key: key);
+  final List<Reporte>? reportes;
+  const ReportsScreen({super.key, this.reportes});
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _evaluacionesHistoricas = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarHistoricoSupabase();
+  }
+
+  Future<void> _cargarHistoricoSupabase() async {
+    setState(() => _isLoading = true);
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('evaluaciones')
+          .select()
+          .order('created_at', ascending: false);
+
+      setState(() {
+        _evaluacionesHistoricas = List<Map<String, dynamic>>.from(response);
+      });
+    } catch (e) {
+      debugPrint('Error al cargar histórico de Supabase: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Color _getSeverityColor(String diagnosis) {
+    if (diagnosis.contains('Sin Disfunción')) return AppColors.success;
+    if (diagnosis.contains('Leve')) return AppColors.primary;
+    if (diagnosis.contains('Moderada')) return AppColors.warning;
+    return AppColors.error;
+  }
+
+  Future<void> _compartirInformePDF(Map<String, dynamic> eval) async {
+    final pdf = pw.Document();
+
+    final String diagnostico = eval['diagnostico'] ?? 'Test de Fonseca';
+    final int score = eval['puntuacion'] ?? 0;
+    final String fecha = eval['fecha'] != null
+        ? eval['fecha'].toString().split('T')[0]
+        : DateTime.now().toString().split(' ')[0];
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('The Clinical Sanctuary • Diagnóstico ATM', style: const pw.TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                    pw.Text('Fecha: $fecha', style: const pw.TextStyle(fontSize: 12)),
+                  ],
+                ),
+                pw.Divider(),
+                pw.SizedBox(height: 16),
+                pw.Text('HISTORIAL CLÍNICO DE EVALUACIÓN', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 12),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(16),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.circular(10),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Puntuación Anamnésica: $score / 100 Puntos', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 6),
+                      pw.Text('Diagnóstico ATM: $diagnostico', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Respuestas del Cuestionario Fonseca:'),
+                pw.SizedBox(height: 10),
+                if (eval['respuestas'] is Map)
+                  for (var entry in (eval['respuestas'] as Map).entries)
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+                      child: pw.Text('${entry.key}: ${entry.value}'),
+                    ),
+                pw.Spacer(),
+                pw.Divider(),
+                pw.Center(
+                  child: pw.Text('Rizo Dental Sanctuary • Firma y Sello del Especialista', style: const pw.TextStyle(fontSize: 10)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    // Abre el menú nativo de compartir (WhatsApp, Correo, Guardar, etc.)
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'rizo_fonseca_reporte_${eval['id'] ?? 'doc'}.pdf',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Reportes de Test de Fonseca'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: widget.reportes.isEmpty
-          ? const Center(child: Text('No hay reportes registrados.'))
-          : Column(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/rizo_logo.png',
+              height: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.bar_chart_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: SizedBox(
-                    height: 120,
-                    child: _buildBarChart(widget.reportes),
+                Text(
+                  'RIZO DENTAL',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: AppColors.primary,
                   ),
                 ),
-                const Divider(),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widget.reportes.length,
-                    itemBuilder: (context, index) {
-                      final reporte = widget.reportes[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.assignment_turned_in, color: Colors.blue),
-                          title: Text('Tipo: ${reporte.tipo}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Fecha: ${_formatDate(reporte.fecha)}'),
-                              Text('Contenido: ${reporte.contenido.length > 30 ? reporte.contenido.substring(0, 30) + '...' : reporte.contenido}'),
-                            ],
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.share, color: Colors.green),
-                            onPressed: () {
-                              _exportReport(reporte);
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                Text(
+                  'Histórico Clínico en Supabase',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textLight,
                   ),
                 ),
               ],
             ),
-    );
-  }
-
-  Widget _buildBarChart(List<Reporte> reportes) {
-    final Map<String, int> buckets = {};
-    for (var r in reportes) {
-      String label = r.tipo;
-      buckets[label] = (buckets[label] ?? 0) + 1;
-    }
-    final tipos = buckets.keys.toList();
-    final valores = tipos.map((t) => buckets[t]!).toList();
-    final controller = GraphifyController();
-    return SizedBox(
-      height: 140,
-      child: GraphifyView(
-        controller: controller,
-        initialOptions: {
-          "xAxis": {
-            "type": "category",
-            "data": tipos,
-            "axisLabel": {"fontSize": 10}
-          },
-          "yAxis": {
-            "type": "value",
-            "axisLabel": {"fontSize": 10}
-          },
-          "series": [
-            {
-              "data": valores,
-              "type": "bar",
-              "itemStyle": {"color": "#1976d2"},
-              "barWidth": 18
-            }
-          ],
-          "grid": {"left": 10, "right": 10, "top": 10, "bottom": 30, "containLabel": true},
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/'
-        '${dateTime.month.toString().padLeft(2, '0')}/'
-        '${dateTime.year}';
-  }
-
-  Future<void> _exportReport(Reporte reporte) async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    final reporteData = reporte.toMap();
-    reporteData['generado_por'] = user?.id ?? '';
-    try {
-      await supabase.from('reportes').insert(reporteData);
-    } catch (e) {
-      print('Error al guardar reporte en Supabase: $e');
-    }
-
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('Reporte de Test de Fonseca',
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 16),
-            pw.Text('Tipo: ${reporte.tipo}', style: const pw.TextStyle(fontSize: 18)),
-            pw.Text('Fecha: ${_formatDate(reporte.fecha)}', style: const pw.TextStyle(fontSize: 16)),
-            pw.SizedBox(height: 24),
-            pw.Text('Contenido:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Text(reporte.contenido, style: const pw.TextStyle(fontSize: 12)),
-            pw.SizedBox(height: 24),
-            pw.Text('Este reporte fue generado automáticamente por la app.', style: const pw.TextStyle(fontSize: 12)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: _cargarHistoricoSupabase,
+          ),
+        ],
       ),
-    );
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
+            : _evaluacionesHistoricas.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.assignment_late_outlined,
+                            size: 64,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No hay evaluaciones registradas aún',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Las evaluaciones realizadas se guardarán automáticamente aquí en Supabase.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textLight),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    itemCount: _evaluacionesHistoricas.length,
+                    itemBuilder: (context, index) {
+                      final eval = _evaluacionesHistoricas[index];
+                      final String diagnostico = eval['diagnostico'] ?? 'Evaluación ATM';
+                      final int score = eval['puntuacion'] ?? 0;
+                      final Color severityColor = _getSeverityColor(diagnostico);
+                      final String fechaStr = eval['fecha'] != null
+                          ? eval['fecha'].toString().split('T')[0]
+                          : 'Reciente';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.shadowSoft,
+                              blurRadius: 20,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: severityColor.withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.assignment_turned_in,
+                                color: severityColor,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    diagnostico,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: severityColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Puntuación: $score / 100 pts • Fecha: $fechaStr',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Botón Exportar / Compartir por cualquier medio
+                            IconButton(
+                              icon: const Icon(Icons.share_outlined, color: AppColors.primary),
+                              tooltip: 'Compartir PDF por WhatsApp, Correo, etc.',
+                              onPressed: () => _compartirInformePDF(eval),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

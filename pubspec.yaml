@@ -17,6 +17,7 @@ dependencies:
   supabase_flutter: ^2.8.3
   google_sign_in: 6.2.1
   provider: ^6.1.5+1
+  url_launcher: ^6.3.0
   dragon_charts_flutter: ^0.1.0
   graphify: ^1.2.1
 
@@ -29,4 +30,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/google_logo.png
+    - assets/images/rizo_logo.png
 

@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'fonseca_test_screen.dart';
+import 'patient_register_screen.dart';
+import 'quick_evaluation_screen.dart';
+import 'prescription_screen.dart';
+import 'inventory_screen.dart';
+import 'appointments_screen.dart';
 import 'reports.dart';
 import '../models/reporte.dart';
 import 'settings_screen.dart';
+import 'profile_screen.dart';
+import 'help_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
+import '../constants/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Reporte> _reportes = [];
   final FirestoreService _firestoreService = FirestoreService();
   Paciente? _pacienteEjemplo;
+  double _primaryBtnScale = 1.0;
 
   @override
   void initState() {
@@ -27,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _cargarPacienteEjemplo() async {
-    // Puedes cambiar el ID por uno real si lo tienes
     const pacienteId = 'paciente_demo';
     Paciente? paciente = await _firestoreService.obtenerPaciente(pacienteId);
     setState(() {
@@ -51,9 +59,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _pacienteEjemplo = paciente;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Paciente de ejemplo guardado en Firestore')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Paciente de ejemplo sincronizado en Supabase'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _onItemTapped(int index) {
@@ -79,42 +93,158 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showEvaluationOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(28),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowSoft,
+                blurRadius: 24,
+                offset: Offset(0, -8),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Opciones de Evaluación',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.ghostOutline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.assessment, color: Colors.blue),
-                title: const Text('Test de Fonseca'),
-                subtitle:
-                    const Text('Evaluación de disfunción temporomandibular'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _startFonsecaTest();
-                },
+              const Text(
+                'Opciones de Evaluación',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.onSurface,
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.quiz, color: Colors.blue),
-                title: const Text('Evaluación Rápida'),
-                subtitle: const Text('Test simplificado'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showFeatureInDevelopment();
-                },
+              const SizedBox(height: 6),
+              const Text(
+                'Selecciona el tipo de diagnóstico a realizar',
+                style: TextStyle(fontSize: 13, color: AppColors.textLight),
               ),
+              const SizedBox(height: 24),
+              
+              // Evaluation Card 0: Registrar Paciente
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
+                  ),
+                  title: const Text(
+                    'Registrar Nuevo Paciente',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                  ),
+                  subtitle: const Text(
+                    'Crear expediente clínico de 3 pasos en Supabase',
+                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final paciente = await Navigator.push<Paciente>(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PatientRegisterScreen()),
+                    );
+                    if (paciente != null) {
+                      setState(() {
+                        _pacienteEjemplo = paciente;
+                      });
+                    }
+                  },
+                ),
+              ),
+
+              // Evaluation Card 1
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.assessment_outlined, color: AppColors.primaryContainer),
+                  ),
+                  title: const Text(
+                    'Test de Fonseca (ATM)',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                  ),
+                  subtitle: const Text(
+                    'Evaluación clínica de disfunción temporomandibular',
+                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startFonsecaTest();
+                  },
+                ),
+              ),
+
+              // Evaluation Card 2: Evaluación Rápida
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.speed_outlined, color: AppColors.primary),
+                  ),
+                  title: const Text(
+                    'Evaluación Rápida ATM',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                  ),
+                  subtitle: const Text(
+                    'Screening exprés de 5 factores de riesgo en consulta',
+                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const QuickEvaluationScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -169,8 +299,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showFeatureInDevelopment() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('🚧 Función en desarrollo'),
-        backgroundColor: Colors.blue,
+        content: Text('🚧 Función clínica en desarrollo'),
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -181,17 +311,27 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: AppColors.surfaceContainerLowest,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text('Cerrar Sesión'),
-          content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+          title: const Text(
+            'Cerrar Sesión',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.onSurface,
+            ),
+          ),
+          content: const Text(
+            '¿Estás seguro de que deseas salir del Santuario Clínico?',
+            style: TextStyle(color: AppColors.textLight),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
                 'Cancelar',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textLight),
               ),
             ),
             ElevatedButton(
@@ -203,8 +343,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text('Cerrar Sesión'),
             ),
@@ -216,23 +359,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String nombreUsuario = _pacienteEjemplo != null
+        ? '${_pacienteEjemplo!.nombre} ${_pacienteEjemplo!.apellido}'
+        : 'Dr. Usuario Rizo';
+
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('ATM - Test de Fonseca'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/rizo_logo.png',
+              height: 36,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.medical_services,
+                color: AppColors.primary,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'RIZO DENTAL',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  'The Clinical Sanctuary',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: AppColors.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            color: AppColors.surfaceContainerLowest,
             onSelected: (String value) {
               switch (value) {
                 case 'profile':
-                  _showFeatureInDevelopment();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  );
                   break;
                 case 'help':
-                  _showFeatureInDevelopment();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HelpScreen()),
+                  );
                   break;
                 case 'logout':
                   _logout();
@@ -243,16 +436,16 @@ class _HomeScreenState extends State<HomeScreen> {
               const PopupMenuItem<String>(
                 value: 'profile',
                 child: ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('Perfil'),
+                  leading: Icon(Icons.person_outline, color: AppColors.primary),
+                  title: Text('Perfil del Especialista'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               const PopupMenuItem<String>(
                 value: 'help',
                 child: ListTile(
-                  leading: Icon(Icons.help),
-                  title: Text('Ayuda'),
+                  leading: Icon(Icons.help_outline, color: AppColors.primary),
+                  title: Text('Centro de Ayuda'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -260,9 +453,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const PopupMenuItem<String>(
                 value: 'logout',
                 child: ListTile(
-                  leading: Icon(Icons.logout, color: Colors.red),
-                  title: Text('Cerrar Sesión',
-                      style: TextStyle(color: Colors.red)),
+                  leading: Icon(Icons.logout, color: AppColors.error),
+                  title: Text(
+                    'Cerrar Sesión',
+                    style: TextStyle(color: AppColors.error),
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -270,240 +465,511 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.withOpacity(0.1),
-              Colors.grey.shade100,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Patient & Specialist Profile Card (Asymmetry & Precision Layering)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(24), // xl radius
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.shadowSoft,
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryContainer],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.blue,
+                      child: const CircleAvatar(
+                        radius: 28,
+                        backgroundColor: AppColors.surfaceContainerLow,
                         child: Icon(
                           Icons.person,
-                          size: 30,
-                          color: Colors.white,
+                          size: 32,
+                          color: AppColors.primary,
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _pacienteEjemplo != null ? _pacienteEjemplo!.nombre + ' ' + _pacienteEjemplo!.apellido : 'Dr. Usuario',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              _pacienteEjemplo?.email ?? 'doctor@clinic.gt',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.verified,
-                        color: Colors.green.shade600,
-                        size: 24,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.save, color: Colors.blue),
-                        tooltip: 'Guardar paciente de ejemplo',
-                        onPressed: _guardarPacienteEjemplo,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Container(
-                  padding: const EdgeInsets.all(30),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.medical_services,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                const Text(
-                  'Sistema de Evaluación',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Test de Fonseca - ATM',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(25),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreUsuario,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _pacienteEjemplo?.email ?? 'doctor@clinic.gt',
+                            style: const TextStyle(
+                              color: AppColors.textLight,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Especialista Odontología / ATM',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.sync, color: AppColors.primary),
+                      tooltip: 'Sincronizar Paciente',
+                      onPressed: _guardarPacienteEjemplo,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Clinical Metrics Summary (Precision Layering)
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 20),
+                              ),
+                              Text(
+                                '${_reportes.length}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Evaluaciones',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          ),
+                          const Text(
+                            'Realizadas en la app',
+                            style: TextStyle(fontSize: 11, color: AppColors.textLight),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.health_and_safety_outlined, color: AppColors.success, size: 20),
+                              ),
+                              const Text(
+                                'ATM',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Diagnóstico',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          ),
+                          const Text(
+                            'Test Fonseca listo',
+                            style: TextStyle(fontSize: 11, color: AppColors.textLight),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              // Main Assessment Action Module (Clinical Sanctuary Signature Card)
+              Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.shadowSoft,
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.06),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.medical_services_outlined,
+                        size: 64,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Evaluación de Disfunción ATM',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Test Anamnésico de Fonseca para medir el grado de gravedad de la articulación temporomandibular.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textLight,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Primary Gradient Pill Button with Scale Micro-Animation
+                    GestureDetector(
+                      onTapDown: (_) => setState(() => _primaryBtnScale = 0.98),
+                      onTapUp: (_) => setState(() => _primaryBtnScale = 1.0),
+                      onTapCancel: () => setState(() => _primaryBtnScale = 1.0),
+                      child: AnimatedScale(
+                        scale: _primaryBtnScale,
+                        duration: const Duration(milliseconds: 120),
+                        child: Container(
                           width: double.infinity,
-                          height: 60,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.primaryContainer,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.shadowSoft,
+                                blurRadius: 20,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
                           child: ElevatedButton.icon(
                             onPressed: _startFonsecaTest,
-                            icon: const Icon(Icons.assessment, size: 24),
+                            icon: const Icon(Icons.assessment, size: 22, color: Colors.white),
                             label: const Text(
                               'Iniciar Test de Fonseca',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              elevation: 3,
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 60,
-                          child: OutlinedButton.icon(
-                            onPressed: _showReports,
-                            icon: const Icon(Icons.history, size: 24),
-                            label: const Text(
-                              'Ver Historial',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.blue,
-                              side: const BorderSide(
-                                  color: Colors.blue, width: 2),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    // Secondary Outlined History Button (Ghost Outline & Glass Pill)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: _showReports,
+                        icon: const Icon(Icons.history, size: 20, color: AppColors.primary),
+                        label: const Text(
+                          'Ver Historial de Diagnósticos',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppColors.surfaceContainerLowest,
+                          side: const BorderSide(
+                            color: AppColors.ghostOutline,
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 28),
+
+              // Módulos Clínicos Sanctuary (Grid de Acceso Rápido)
+              const Text(
+                'Módulos Clínicos Sanctuary',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+              ),
+              const SizedBox(height: 14),
+
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 1.25,
+                children: [
+                  // Card 1: Receta Médica
+                  _buildDashboardModuleCard(
+                    title: 'Receta Médica',
+                    subtitle: 'Firma digital & WhatsApp',
+                    icon: Icons.medical_services_outlined,
+                    color: AppColors.primary,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PrescriptionScreen()));
+                    },
+                  ),
+
+                  // Card 2: Inventario
+                  _buildDashboardModuleCard(
+                    title: 'Inventario Clínico',
+                    subtitle: 'Insumos & Alertas Stock',
+                    icon: Icons.inventory_2_outlined,
+                    color: const Color(0xFF007A78),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
+                    },
+                  ),
+
+                  // Card 3: Gestión de Citas
+                  _buildDashboardModuleCard(
+                    title: 'Gestión de Citas',
+                    subtitle: 'Agenda & Recordatorios WA',
+                    icon: Icons.calendar_month_outlined,
+                    color: const Color(0xFF983C00),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AppointmentsScreen()));
+                    },
+                  ),
+
+                  // Card 4: Perfil Profesional
+                  _buildDashboardModuleCard(
+                    title: 'Perfil Doctor',
+                    subtitle: 'Membrete & Colegiado',
+                    icon: Icons.person_pin_outlined,
+                    color: const Color(0xFF5B3E96),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
+
+      // Glassmorphic Floating Navigation Bar
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         decoration: BoxDecoration(
-          boxShadow: [
+          color: AppColors.surfaceContainerLowest.withOpacity(0.92),
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: AppColors.shadowSoft,
+              blurRadius: 24,
+              offset: Offset(0, 8),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.textLight,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
+            ),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Inicio',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assessment_outlined),
+                activeIcon: Icon(Icons.assessment),
+                label: 'Evaluar',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.bar_chart_outlined),
+                activeIcon: Icon(Icons.bar_chart),
+                label: 'Reportes',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.settings_outlined),
+                activeIcon: Icon(Icons.settings),
+                label: 'Config',
+              ),
+            ],
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 11,
-          ),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Inicio',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardModuleCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadowSoft,
+              blurRadius: 18,
+              offset: Offset(0, 6),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.assessment_outlined),
-              activeIcon: Icon(Icons.assessment),
-              label: 'Evaluar',
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart),
-              label: 'Reportes',
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
-              label: 'Config',
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textLight,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
