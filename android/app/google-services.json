@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "886418741979",
+    "project_id": "test-de-fonseca-app",
+    "storage_bucket": "test-de-fonseca-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886418741979:android:d15c81b6e778b84f108afe",
+        "android_client_info": {
+          "package_name": "com.example.test_de_fonseca"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "886418741979-eh40a62gnt0sc5k48bie92c0v6eubfoq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.test_de_fonseca",
+            "certificate_hash": "cdf65e195158a53e1061837acafe84c8e69b3801"
+          }
+        },
+        {
+          "client_id": "886418741979-2h39i5bavc85ae1vl8jl8ppp5mg2opnb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlNAa9n97kJKQLvHM33X-aNY1-9H_SSYc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886418741979-2h39i5bavc85ae1vl8jl8ppp5mg2opnb.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "886418741979-s2mvtm2tgsvqq5dkjgiohq8sknsl5kh3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.testDeFonseca"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
