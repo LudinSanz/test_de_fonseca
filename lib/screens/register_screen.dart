@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../constants/colors.dart';
 import 'home_screen.dart';
@@ -13,8 +14,13 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
+  final TextEditingController _colegiadoController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -25,27 +31,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _especialidadController.dispose();
+    _colegiadoController.dispose();
+    _telefonoController.dispose();
+    _direccionController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
   String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Por favor ingresa tu nombre completo';
     }
-    if (value.length < 3) {
+    if (value.trim().length < 3) {
       return 'El nombre debe tener al menos 3 caracteres';
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Por favor ingresa tu correo electrónico';
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
+    if (!emailRegex.hasMatch(value.trim())) {
       return 'Por favor ingresa un correo válido';
     }
     return null;
@@ -91,9 +101,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (user != null) {
+        // Guardar perfil completo en la tabla 'users' de Supabase
+        final supabase = Supabase.instance.client;
+        final userData = {
+          'id': user.id,
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'colegiado': _colegiadoController.text.trim(),
+          'especialidad': _especialidadController.text.trim(),
+          'telefono': _telefonoController.text.trim(),
+          'direccion_clinica': _direccionController.text.trim(),
+          'firma_digital': '${_nameController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
+        };
+
+        await supabase.from('users').upsert(userData);
+
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('¡Cuenta creada exitosamente! Bienvenido(a) ${user.name}'),
+            content: Text('¡Cuenta creada y registrada en Supabase! Bienvenido(a) ${user.name}'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
@@ -106,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error: No se pudo registrar el usuario'),
+            content: Text('Error: No se pudo registrar el usuario en Supabase'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -116,7 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error al registrar: ${e.toString()}'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -129,6 +156,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     }
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
+      filled: true,
+      fillColor: AppColors.surfaceContainerLow,
+      prefixIcon: Icon(icon, color: AppColors.primary),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.8)),
+    );
   }
 
   @override
@@ -148,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -194,20 +234,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Crear Cuenta • Registro Clínico',
+                      'Registro de Usuario • Base de Datos Supabase',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: AppColors.textLight,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
                     Container(
                       padding: const EdgeInsets.all(28),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(28),
                         boxShadow: const [
                           BoxShadow(
                             color: AppColors.shadowSoft,
@@ -220,14 +260,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Text(
-                            'Registro de Usuario',
+                            'Formulario de Registro Oficial',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Al registrarte, tu perfil se guardará en Supabase y te permitirá iniciar sesión con Google o Correo.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 20),
 
                           // Name Field
                           TextFormField(
@@ -235,27 +280,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             keyboardType: TextInputType.name,
                             validator: _validateName,
                             style: const TextStyle(color: AppColors.onSurface),
-                            decoration: InputDecoration(
-                              labelText: 'Nombre completo',
-                              labelStyle: const TextStyle(color: AppColors.textLight),
-                              filled: true,
-                              fillColor: AppColors.surfaceContainerLow,
-                              prefixIcon: const Icon(Icons.person_outline, color: AppColors.primary),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
-                              ),
-                            ),
+                            decoration: _inputDecoration('Nombre completo', Icons.person_outline),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
 
                           // Email Field
                           TextFormField(
@@ -263,27 +290,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             keyboardType: TextInputType.emailAddress,
                             validator: _validateEmail,
                             style: const TextStyle(color: AppColors.onSurface),
-                            decoration: InputDecoration(
-                              labelText: 'Correo electrónico',
-                              labelStyle: const TextStyle(color: AppColors.textLight),
-                              filled: true,
-                              fillColor: AppColors.surfaceContainerLow,
-                              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
-                              ),
-                            ),
+                            decoration: _inputDecoration('Correo electrónico', Icons.email_outlined),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
+
+                          // Specialty & Colegiado Number
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _especialidadController,
+                                  style: const TextStyle(color: AppColors.onSurface),
+                                  decoration: _inputDecoration('Especialidad', Icons.workspace_premium_outlined),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _colegiadoController,
+                                  style: const TextStyle(color: AppColors.onSurface),
+                                  decoration: _inputDecoration('No. Colegiado', Icons.card_membership),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Phone & Clinic Address
+                          TextFormField(
+                            controller: _telefonoController,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(color: AppColors.onSurface),
+                            decoration: _inputDecoration('Teléfono / WhatsApp', Icons.phone_outlined),
+                          ),
+                          const SizedBox(height: 14),
+
+                          TextFormField(
+                            controller: _direccionController,
+                            style: const TextStyle(color: AppColors.onSurface),
+                            decoration: _inputDecoration('Dirección de la Clínica', Icons.location_on_outlined),
+                          ),
+                          const SizedBox(height: 14),
 
                           // Password Field
                           TextFormField(
@@ -293,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: AppColors.onSurface),
                             decoration: InputDecoration(
                               labelText: 'Contraseña',
-                              labelStyle: const TextStyle(color: AppColors.textLight),
+                              labelStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
                               filled: true,
                               fillColor: AppColors.surfaceContainerLow,
                               prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
@@ -308,21 +355,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   });
                                 },
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
-                              ),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.8)),
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
 
                           // Confirm Password Field
                           TextFormField(
@@ -332,7 +370,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: const TextStyle(color: AppColors.onSurface),
                             decoration: InputDecoration(
                               labelText: 'Confirmar contraseña',
-                              labelStyle: const TextStyle(color: AppColors.textLight),
+                              labelStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
                               filled: true,
                               fillColor: AppColors.surfaceContainerLow,
                               prefixIcon: const Icon(Icons.lock_reset_outlined, color: AppColors.primary),
@@ -347,18 +385,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   });
                                 },
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
-                              ),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.8)),
                             ),
                           ),
                           const SizedBox(height: 28),
@@ -410,9 +439,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           ),
                                         )
                                       : const Text(
-                                          'Crear Mi Cuenta',
+                                          'Registrar Perfil en Supabase',
                                           style: TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 15,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                             letterSpacing: 0.5,
