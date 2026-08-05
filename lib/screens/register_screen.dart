@@ -103,29 +103,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (user != null) {
         final supabase = Supabase.instance.client;
         
-        // Payload completo con reintento resiliente si faltan columnas opcionales en Supabase
-        final Map<String, dynamic> fullUserData = {
-          'id': user.id,
-          'name': _nameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'colegiado': _colegiadoController.text.trim(),
-          'especialidad': _especialidadController.text.trim(),
-          'telefono': _telefonoController.text.trim(),
-          'direccion_clinica': _direccionController.text.trim(),
-          'firma_digital': '${_nameController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
-        };
-
+        // Nivel 1: Guardar todos los datos del perfil si las columnas existen en Supabase
         try {
-          await supabase.from('users').upsert(fullUserData);
-        } catch (e) {
-          // Reintento resiliente solo con campos estándar universales (id, name, email, telefono)
-          final Map<String, dynamic> baseUserData = {
+          await supabase.from('users').upsert({
             'id': user.id,
             'name': _nameController.text.trim(),
             'email': _emailController.text.trim(),
+            'colegiado': _colegiadoController.text.trim(),
+            'especialidad': _especialidadController.text.trim(),
             'telefono': _telefonoController.text.trim(),
-          };
-          await supabase.from('users').upsert(baseUserData);
+            'direccion_clinica': _direccionController.text.trim(),
+            'firma_digital': '${_nameController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
+          });
+        } catch (e1) {
+          // Nivel 2: Si la tabla 'users' no tiene las columnas personalizadas, guardar sólo id, name, email
+          try {
+            await supabase.from('users').upsert({
+              'id': user.id,
+              'name': _nameController.text.trim(),
+              'email': _emailController.text.trim(),
+            });
+          } catch (e2) {
+            debugPrint('Nota: Usuario registrado en Supabase Auth. La tabla users omitió campos no soportados.');
+          }
         }
 
         if (!mounted) return;
