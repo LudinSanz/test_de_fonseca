@@ -14,11 +14,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  final TextEditingController _nombreController = TextEditingController(text: 'Dr. Ludin Solís');
-  final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Rehabilitación Oral');
-  final TextEditingController _colegiadoController = TextEditingController(text: '14890');
-  final TextEditingController _telefonoController = TextEditingController(text: '+502 5555 1234');
-  final TextEditingController _emailController = TextEditingController(text: 'dr.ludin@rizodental.com');
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
+  final TextEditingController _colegiadoController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController(text: 'Edificio Sixtino II, Nivel 7, Oficina 702, Zona 10, Guatemala');
 
   double _btnScale = 1.0;
@@ -45,20 +45,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        final res = await Supabase.instance.client
+        if (user.email != null && user.email!.isNotEmpty) {
+          _emailController.text = user.email!;
+        }
+
+        var res = await Supabase.instance.client
             .from('users')
             .select()
             .eq('id', user.id)
             .maybeSingle();
 
+        if (res == null && user.email != null) {
+          res = await Supabase.instance.client
+              .from('users')
+              .select()
+              .eq('email', user.email!)
+              .maybeSingle();
+        }
+
         if (res != null) {
           final data = Map<String, dynamic>.from(res);
-          if (data['name'] != null) _nombreController.text = data['name'];
-          if (data['especialidad'] != null) _especialidadController.text = data['especialidad'];
-          if (data['colegiado'] != null) _colegiadoController.text = data['colegiado'];
-          if (data['telefono'] != null) _telefonoController.text = data['telefono'];
-          if (data['email'] != null) _emailController.text = data['email'];
-          if (data['direccion_clinica'] != null) _direccionController.text = data['direccion_clinica'];
+          if (data['name'] != null && data['name'].toString().isNotEmpty) {
+            _nombreController.text = data['name'];
+          }
+          if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
+            _especialidadController.text = data['especialidad'];
+          }
+          if (data['colegiado'] != null && data['colegiado'].toString().isNotEmpty) {
+            _colegiadoController.text = data['colegiado'];
+          }
+          if (data['telefono'] != null && data['telefono'].toString().isNotEmpty) {
+            _telefonoController.text = data['telefono'];
+          }
+          if (data['email'] != null && data['email'].toString().isNotEmpty) {
+            _emailController.text = data['email'];
+          }
+          if (data['direccion_clinica'] != null && data['direccion_clinica'].toString().isNotEmpty) {
+            _direccionController.text = data['direccion_clinica'];
+          }
+        } else {
+          final String userMetaName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
+          if (userMetaName.isNotEmpty) {
+            _nombreController.text = userMetaName;
+          }
         }
       }
     } catch (e) {
@@ -72,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isSaving = true);
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      final String userId = user?.id ?? 'doctor_ludin';
+      final String userId = user?.id ?? 'doctor_user_${DateTime.now().millisecondsSinceEpoch}';
 
       final doctorData = {
         'id': userId,
@@ -85,7 +114,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'firma_digital': '${_nombreController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
       };
 
-      await Supabase.instance.client.from('users').upsert(doctorData);
+      try {
+        await Supabase.instance.client.from('users').upsert(doctorData);
+      } catch (e1) {
+        await Supabase.instance.client.from('users').upsert({
+          'id': userId,
+          'name': _nombreController.text.trim(),
+          'email': _emailController.text.trim(),
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -98,7 +135,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error al guardar perfil doctor: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar perfil: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

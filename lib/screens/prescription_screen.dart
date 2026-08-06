@@ -135,12 +135,15 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     final supabase = Supabase.instance.client;
     final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
 
+    final String medTexto = _medicamentos.map((m) => '• ${m['nombre']} (${m['dosis']}) - C/${m['frecuencia_horas']}h por ${m['dias']} días').join('\n');
+
     final recetaData = {
       'id': 'receta_${DateTime.now().millisecondsSinceEpoch}',
       'paciente_id': _pacienteSeleccionado!.id,
       'paciente_nombre': '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}',
       'fecha': DateTime.now().toIso8601String(),
-      'medicamentos': _medicamentos,
+      'medicamentos': medTexto,
+      'indicaciones': _indicacionesGeneralesController.text.trim(),
       'indicaciones_generales': _indicacionesGeneralesController.text.trim(),
       'doctor_nombre': doctorRes?['name'] ?? 'Dr. Rizo Dental',
       'firma_digital': doctorRes?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal',
@@ -153,6 +156,14 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     }
 
     if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('¡Receta guardada exitosamente en el historial del paciente!'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
     if (viaWhatsApp) {
       final tel = _pacienteSeleccionado!.telefono;
@@ -170,7 +181,10 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       }
       buffer.writeln('\n_Dr. ${doctorRes?["name"] ?? "Rizo Dental"}_');
 
-      final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
+      String cleanPhone = tel.replaceAll(RegExp(r'[^\d]'), '');
+      if (!cleanPhone.startsWith('502') && cleanPhone.length == 8) {
+        cleanPhone = '502$cleanPhone';
+      }
       final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
 
       if (await canLaunchUrl(url)) {

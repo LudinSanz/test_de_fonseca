@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login_screen.dart';
 import 'fonseca_test_screen.dart';
 import 'patient_register_screen.dart';
@@ -12,6 +12,7 @@ import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'help_screen.dart';
 import 'patient_history_screen.dart';
+import 'patient_directory_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
 import '../constants/colors.dart';
@@ -30,10 +31,64 @@ class _HomeScreenState extends State<HomeScreen> {
   Paciente? _pacienteEjemplo;
   double _primaryBtnScale = 1.0;
 
+  String _doctorNombre = 'Especialista Odontología';
+  String _doctorEmail = 'doctor@rizodental.com';
+  String _doctorEspecialidad = 'Especialista en Disfunción ATM';
+
   @override
   void initState() {
     super.initState();
     _cargarPacienteEjemplo();
+    _cargarDatosDoctor();
+  }
+
+  Future<void> _cargarDatosDoctor() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        if (user.email != null && user.email!.isNotEmpty) {
+          _doctorEmail = user.email!;
+        }
+
+        var res = await Supabase.instance.client
+            .from('users')
+            .select()
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (res == null && user.email != null) {
+          res = await Supabase.instance.client
+              .from('users')
+              .select()
+              .eq('email', user.email!)
+              .maybeSingle();
+        }
+
+        if (res != null) {
+          final data = Map<String, dynamic>.from(res);
+          setState(() {
+            if (data['name'] != null && data['name'].toString().isNotEmpty) {
+              _doctorNombre = data['name'];
+            }
+            if (data['email'] != null && data['email'].toString().isNotEmpty) {
+              _doctorEmail = data['email'];
+            }
+            if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
+              _doctorEspecialidad = data['especialidad'];
+            }
+          });
+        } else {
+          final String userMetaName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
+          if (userMetaName.isNotEmpty) {
+            setState(() {
+              _doctorNombre = userMetaName;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error al cargar datos del doctor en HomeScreen: $e');
+    }
   }
 
   Future<void> _cargarPacienteEjemplo() async {
@@ -514,7 +569,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            nombreUsuario,
+                            _doctorNombre,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -523,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _pacienteEjemplo?.email ?? 'doctor@clinic.gt',
+                            _doctorEmail,
                             style: const TextStyle(
                               color: AppColors.textLight,
                               fontSize: 13,
@@ -536,9 +591,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: AppColors.primary.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'Especialista Odontología / ATM',
-                              style: TextStyle(
+                            child: Text(
+                              _doctorEspecialidad,
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.primary,

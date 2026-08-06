@@ -137,6 +137,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   'paciente_nombre': '${pacienteSeleccionado!.nombre} ${pacienteSeleccionado!.apellido}',
                   'paciente_telefono': pacienteSeleccionado!.telefono,
                   'fecha_hora': dtCombined.toIso8601String(),
+                  'fecha': '${dtCombined.day.toString().padLeft(2, '0')}/${dtCombined.month.toString().padLeft(2, '0')}/${dtCombined.year}',
+                  'hora': '${dtCombined.hour.toString().padLeft(2, '0')}:${dtCombined.minute.toString().padLeft(2, '0')}',
                   'motivo': motivoController.text.trim(),
                   'notas': notasController.text.trim(),
                   'estado': 'Programada',

@@ -21,6 +21,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _direccionController = TextEditingController();
+  String _codigoPais = '+502';
   DateTime _fechaNacimiento = DateTime(1995, 6, 15);
   String _genero = 'Femenino';
 
@@ -75,12 +76,18 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
 
     try {
       final nuevoId = 'paciente_${DateTime.now().millisecondsSinceEpoch}';
+      String rawTel = _telefonoController.text.trim();
+      String telefonoFinal = rawTel;
+      if (!rawTel.startsWith('+')) {
+        telefonoFinal = '$_codigoPais $rawTel';
+      }
+
       final paciente = Paciente(
         id: nuevoId,
         nombre: _nombreController.text.trim(),
         apellido: _apellidoController.text.trim(),
         email: _emailController.text.trim(),
-        telefono: _telefonoController.text.trim(),
+        telefono: telefonoFinal,
         fechaNacimiento: _fechaNacimiento,
         genero: _genero,
         direccion: _direccionController.text.trim(),
@@ -521,13 +528,49 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Teléfono
-            TextFormField(
-              controller: _telefonoController,
-              keyboardType: TextInputType.phone,
-              validator: (v) => (v == null || v.isEmpty) ? 'Ingresa el teléfono' : null,
-              style: const TextStyle(color: AppColors.onSurface),
-              decoration: _inputDecoration('Teléfono de contacto', Icons.phone_outlined),
+            // Teléfono con Selección de Código de País (Centroamérica)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.ghostOutline, width: 1.0),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _codigoPais,
+                      icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                      items: const [
+                        DropdownMenuItem(value: '+502', child: Text('🇬🇹 +502', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+503', child: Text('🇸🇻 +503', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+504', child: Text('🇭🇳 +504', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+505', child: Text('🇳🇮 +505', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+506', child: Text('🇨🇷 +506', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+507', child: Text('🇵🇦 +507', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+52', child: Text('🇲🇽 +52', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: '+1', child: Text('🇺🇸 +1', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _codigoPais = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    controller: _telefonoController,
+                    keyboardType: TextInputType.phone,
+                    validator: (v) => (v == null || v.isEmpty) ? 'Ingresa el teléfono' : null,
+                    style: const TextStyle(color: AppColors.onSurface),
+                    decoration: _inputDecoration('Teléfono / WhatsApp', Icons.phone_outlined),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
