@@ -819,10 +819,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _showReports,
-                            icon: const Icon(Icons.history, size: 18, color: AppColors.primary),
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const QuickEvaluationScreen()));
+                            },
+                            icon: const Icon(Icons.speed, size: 18, color: AppColors.primary),
                             label: const Text(
-                              'Diagnósticos',
+                              'Evaluación Rápida',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

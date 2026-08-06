@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
+import '../widgets/signature_pad.dart';
 
 class PrescriptionScreen extends StatefulWidget {
   const PrescriptionScreen({super.key});
@@ -137,91 +138,24 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     
     final doctorName = doctorRes?['name'] ?? 'Dr. Rizo Dental';
     final doctorColegiado = doctorRes?['colegiado'] ?? '0000';
-    final firmaDefault = doctorRes?['firma_digital'] ?? '$doctorName - Colegiado #$doctorColegiado';
-
-    final firmaController = TextEditingController(text: firmaDefault);
 
     if (!mounted) return;
 
-    showDialog(
+    final firmaObtenida = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.draw_outlined, color: AppColors.primary),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Firma Digital de Prescripción',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Confirma o ingresa tu firma digital para autorizar la prescripción y guardarla en el historial del paciente:',
-                style: TextStyle(fontSize: 12, color: AppColors.textLight),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: firmaController,
-                maxLines: 2,
-                decoration: _inputDecoration('Firma / Sello del Médico Especialista'),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(Icons.verified_outlined, size: 16, color: AppColors.success),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Médico: $doctorName (Colegiado #$doctorColegiado)',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _guardarYEnviarReceta(
-                viaWhatsApp: viaWhatsApp,
-                firmaDigitalConfirmada: firmaController.text.trim(),
-              );
-            },
-            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            label: const Text('Firmar y Procesar', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-          ),
-        ],
+      builder: (ctx) => SignaturePadDialog(
+        doctorName: doctorName,
+        doctorColegiado: doctorColegiado,
       ),
     );
+
+    if (firmaObtenida != null && firmaObtenida.isNotEmpty) {
+      await _guardarYEnviarReceta(
+        viaWhatsApp: viaWhatsApp,
+        firmaDigitalConfirmada: firmaObtenida,
+      );
+    }
   }
 
   Future<void> _guardarYEnviarReceta({required bool viaWhatsApp, required String firmaDigitalConfirmada}) async {
