@@ -272,7 +272,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       if (_indicacionesGeneralesController.text.isNotEmpty) {
         buffer.writeln('\n*Indicaciones:* ${_indicacionesGeneralesController.text.trim()}');
       }
-      buffer.writeln('\n_Firma: $firmaDigitalConfirmada_');
+      buffer.writeln('\n_Firma: ${firmaDigitalConfirmada}_');
 
       String cleanPhone = tel.replaceAll(RegExp(r'[^\d]'), '');
       if (!cleanPhone.startsWith('502') && cleanPhone.length == 8) {

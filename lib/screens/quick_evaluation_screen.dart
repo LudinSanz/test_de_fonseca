@@ -281,13 +281,13 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
           return pw.Padding(
             padding: const pw.EdgeInsets.all(28),
             child: pw.Column(
-              cross: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Column(
-                      cross: pw.CrossAxisAlignment.start,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
                         pw.Text('The Clinical Sanctuary • Evaluación Rápida', style: const pw.TextStyle(fontSize: 12)),
@@ -309,7 +309,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                     borderRadius: pw.BorderRadius.circular(10),
                   ),
                   child: pw.Column(
-                    cross: pw.CrossAxisAlignment.start,
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text('Puntuación de Riesgo: $score / 100 Puntos', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 6),
