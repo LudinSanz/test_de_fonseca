@@ -124,16 +124,26 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null && mounted) {
-        // Consultar si el correo de Google ya existe en la tabla 'users' de Supabase
         final supabase = Supabase.instance.client;
-        final existingUser = await supabase
-            .from('users')
-            .select()
-            .eq('email', user.email)
-            .maybeSingle();
+        final String searchEmail = user.email.trim();
+
+        // 1. Consultar si el correo de Google ya existe en la tabla 'users' de Supabase
+        Map<String, dynamic>? existingUser;
+        try {
+          var res = await supabase
+              .from('users')
+              .select()
+              .ilike('email', searchEmail)
+              .maybeSingle();
+          if (res != null) {
+            existingUser = Map<String, dynamic>.from(res);
+          }
+        } catch (e) {
+          debugPrint('Aviso en consulta ilike users: $e');
+        }
 
         if (existingUser != null) {
-          // B) SI YA EXISTE EL CORREO -> Dejar entrar al instante
+          // SI YA EXISTE EL CORREO REGISTRADO PREVIAMENTE -> Entrar directamente
           final nombrePerfil = existingUser['name'] ?? user.name;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -148,23 +158,28 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          // A) SI ES PRIMERA VEZ EL CORREO -> Llevar a registro prellenado para completar y guardar
+          // Registrar automáticamente usuario en 'users' para evitar bloquear el ingreso
+          try {
+            await supabase.from('users').upsert({
+              'id': user.id,
+              'name': user.name,
+              'email': searchEmail,
+            });
+          } catch (e) {
+            debugPrint('Aviso al upsert usuario google: $e');
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Primera vez ingresando con Google. Por favor completa tus datos de registro.'),
-              backgroundColor: AppColors.primary,
+            SnackBar(
+              content: Text('¡Bienvenido(a) ${user.name}!'),
+              backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 4),
+              duration: const Duration(seconds: 3),
             ),
           );
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) => RegisterScreen(
-                initialName: user.name,
-                initialEmail: user.email,
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       }
@@ -174,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text('Error al iniciar sesión con Google: $e'),
             backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }

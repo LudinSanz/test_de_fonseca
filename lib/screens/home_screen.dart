@@ -840,11 +840,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientHistoryScreen()));
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()));
                             },
                             icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Colors.white),
                             label: const Text(
-                              'Histórico 360°',
+                              'Directorio 360°',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -879,14 +879,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSpacing: 14,
                 childAspectRatio: 1.25,
                 children: [
-                  // Card 1: Histórico 360° del Paciente
+                  // Card 1: Directorio de Pacientes & Expediente 360°
                   _buildDashboardModuleCard(
-                    title: 'Histórico 360°',
-                    subtitle: 'Test, Recetas & Citas',
+                    title: 'Directorio Pacientes',
+                    subtitle: 'Expediente & Histórico 360°',
                     icon: Icons.folder_shared_outlined,
                     color: AppColors.primary,
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientHistoryScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()));
                     },
                   ),
 

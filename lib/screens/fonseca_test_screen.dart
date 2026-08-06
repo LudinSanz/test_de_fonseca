@@ -156,6 +156,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     final evaluacionData = {
       'id': 'fonseca_${DateTime.now().millisecondsSinceEpoch}',
       'paciente_id': _pacienteSeleccionado?.id ?? 'paciente_general',
+      'pacienteId': _pacienteSeleccionado?.id ?? 'paciente_general',
       'paciente_nombre': pacienteNombre,
       'fecha': DateTime.now().toIso8601String(),
       'puntuacion': score,

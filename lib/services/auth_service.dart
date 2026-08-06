@@ -68,13 +68,12 @@ class AuthService {
   Future<void> guardarPerfilUsuario(String userId, String userEmail, String? nombre) async {
     final userData = {
       'id': userId,
-      'nombre': nombre ?? 'Nombre del Usuario',
-      'email': userEmail,
-      'rol': 'clínico',
-      'fecha_registro': DateTime.now().toIso8601String(),
+      'name': nombre ?? 'Dr. Especialista Rizo Dental',
+      'email': userEmail.trim(),
+      'created_at': DateTime.now().toIso8601String(),
     };
     try {
-      await _supabase.from('users').upsert(userData);
+      await _supabase.from('users').upsert(userData, onConflict: 'email');
       print('Perfil del usuario guardado en Supabase con ID: $userId');
     } catch (e) {
       print('Error al guardar el perfil en Supabase: $e');
@@ -89,7 +88,7 @@ class AuthService {
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser != null) {
         final name = googleUser.displayName ?? 'Usuario Google';
-        final email = googleUser.email;
+        final email = googleUser.email.trim();
         final userId = 'google_${googleUser.id}';
         
         await guardarPerfilUsuario(userId, email, name);
