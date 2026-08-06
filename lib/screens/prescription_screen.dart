@@ -124,7 +124,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     );
   }
 
-  Future<void> _guardarYEnviarReceta({bool viaWhatsApp = false}) async {
+  Future<void> _pedirFirmaYProcesarReceta({required bool viaWhatsApp}) async {
     if (_pacienteSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor selecciona un paciente primero'), backgroundColor: AppColors.error),
@@ -132,6 +132,99 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       return;
     }
 
+    final supabase = Supabase.instance.client;
+    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
+    
+    final doctorName = doctorRes?['name'] ?? 'Dr. Rizo Dental';
+    final doctorColegiado = doctorRes?['colegiado'] ?? '0000';
+    final firmaDefault = doctorRes?['firma_digital'] ?? '$doctorName - Colegiado #$doctorColegiado';
+
+    final firmaController = TextEditingController(text: firmaDefault);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.draw_outlined, color: AppColors.primary),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Firma Digital de Prescripción',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Confirma o ingresa tu firma digital para autorizar la prescripción y guardarla en el historial del paciente:',
+                style: TextStyle(fontSize: 12, color: AppColors.textLight),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: firmaController,
+                maxLines: 2,
+                decoration: _inputDecoration('Firma / Sello del Médico Especialista'),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.verified_outlined, size: 16, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Médico: $doctorName (Colegiado #$doctorColegiado)',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _guardarYEnviarReceta(
+                viaWhatsApp: viaWhatsApp,
+                firmaDigitalConfirmada: firmaController.text.trim(),
+              );
+            },
+            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+            label: const Text('Firmar y Procesar', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _guardarYEnviarReceta({required bool viaWhatsApp, required String firmaDigitalConfirmada}) async {
     final supabase = Supabase.instance.client;
     final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
 
@@ -146,7 +239,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       'indicaciones': _indicacionesGeneralesController.text.trim(),
       'indicaciones_generales': _indicacionesGeneralesController.text.trim(),
       'doctor_nombre': doctorRes?['name'] ?? 'Dr. Rizo Dental',
-      'firma_digital': doctorRes?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal',
+      'firma_digital': firmaDigitalConfirmada.isNotEmpty ? firmaDigitalConfirmada : (doctorRes?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal'),
     };
 
     try {
@@ -159,7 +252,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('¡Receta guardada exitosamente en el historial del paciente!'),
+        content: Text('¡Receta firmada y guardada exitosamente en el historial del paciente!'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
@@ -179,7 +272,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       if (_indicacionesGeneralesController.text.isNotEmpty) {
         buffer.writeln('\n*Indicaciones:* ${_indicacionesGeneralesController.text.trim()}');
       }
-      buffer.writeln('\n_Dr. ${doctorRes?["name"] ?? "Rizo Dental"}_');
+      buffer.writeln('\n_Firma: $firmaDigitalConfirmada_');
 
       String cleanPhone = tel.replaceAll(RegExp(r'[^\d]'), '');
       if (!cleanPhone.startsWith('502') && cleanPhone.length == 8) {
@@ -187,15 +280,22 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       }
       final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
 
-      if (await canLaunchUrl(url)) {
+      try {
+        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+          await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
+        }
+      } catch (e) {
         await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
       }
     } else {
+      Map<String, dynamic> doctorInfoFinal = Map<String, dynamic>.from(doctorRes ?? {});
+      doctorInfoFinal['firma_digital'] = firmaDigitalConfirmada;
+
       await PdfGenerator.generarPdfReceta(
         paciente: _pacienteSeleccionado!,
         medicamentos: _medicamentos,
         indicaciones: _indicacionesGeneralesController.text.trim(),
-        doctorInfo: doctorRes,
+        doctorInfo: doctorInfoFinal,
       );
     }
   }
@@ -394,7 +494,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                             child: OutlinedButton.icon(
                               icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
                               label: const Text('Exportar PDF Rizo', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                              onPressed: () => _guardarYEnviarReceta(viaWhatsApp: false),
+                              onPressed: () => _pedirFirmaYProcesarReceta(viaWhatsApp: false),
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
@@ -409,7 +509,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.send_to_mobile, color: Colors.white),
                               label: const Text('Enviar WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                              onPressed: () => _guardarYEnviarReceta(viaWhatsApp: true),
+                              onPressed: () => _pedirFirmaYProcesarReceta(viaWhatsApp: true),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
