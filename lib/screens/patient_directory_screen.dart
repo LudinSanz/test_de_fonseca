@@ -32,17 +32,6 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   List<Map<String, dynamic>> _citas = [];
   bool _isLoadingHistorial = false;
 
-  final Map<String, String> _countryCodes = {
-    '🇬🇹 Guatemala (+502)': '502',
-    '🇸🇻 El Salvador (+503)': '503',
-    '🇭🇳 Honduras (+504)': '504',
-    '🇳🇮 Nicaragua (+505)': '505',
-    '🇨🇷 Costa Rica (+506)': '506',
-    '🇵🇦 Panamá (+507)': '507',
-    '🇲🇽 México (+52)': '52',
-    '🇺🇸 EE.UU. (+1)': '1',
-  };
-
   @override
   void initState() {
     super.initState();
