@@ -16,53 +16,61 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
   List<Paciente> _pacientes = [];
   Paciente? _pacienteSeleccionado;
   bool _loadingPacientes = true;
+  bool _isSaving = false;
+  double _btnScale = 1.0;
 
   final List<Map<String, dynamic>> _questions = [
     {
+      'id': 1,
       'question': '¿Tiene dificultad para abrir la boca?',
       'answer': null,
     },
     {
+      'id': 2,
       'question': '¿Tiene dificultad para mover la mandíbula hacia los lados?',
       'answer': null,
     },
     {
+      'id': 3,
       'question': '¿Siente cansancio o fatiga en los músculos de la masticación?',
       'answer': null,
     },
     {
+      'id': 4,
       'question': '¿Tiene dolor en la articulación de la mandíbula (ATM)?',
       'answer': null,
     },
     {
+      'id': 5,
       'question': '¿Tiene dolor en el cuello o la nuca?',
       'answer': null,
     },
     {
+      'id': 6,
       'question': '¿Tiene dolor de cabeza (cefalea) frecuente?',
       'answer': null,
     },
     {
+      'id': 7,
       'question': '¿Tiene dolor o molestia en los oídos?',
       'answer': null,
     },
     {
+      'id': 8,
       'question': '¿Ha notado ruidos o chasquidos (click) al masticar o abrir la boca?',
       'answer': null,
     },
     {
+      'id': 9,
       'question': '¿Ha notado si aprieta o rechina los dientes (bruxismo)?',
       'answer': null,
     },
     {
+      'id': 10,
       'question': '¿Siente que sus dientes no articulan o encajan bien?',
       'answer': null,
     },
   ];
-
-  int _currentQuestionIndex = 0;
-  final PageController _pageController = PageController();
-  double _btnScale = 1.0;
 
   @override
   void initState() {
@@ -70,17 +78,11 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     _cargarPacientes();
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   Future<void> _cargarPacientes() async {
     setState(() => _loadingPacientes = true);
     try {
       final supabase = Supabase.instance.client;
-      final res = await supabase.from('pacientes').select();
+      final res = await supabase.from('pacientes').select().order('nombre');
       final list = (res as List)
           .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
           .toList();
@@ -123,6 +125,10 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     return score;
   }
 
+  int _countAnswered() {
+    return _questions.where((q) => q['answer'] != null).length;
+  }
+
   String _getDiagnosis(int score) {
     if (score >= 0 && score <= 15) {
       return 'Sin Disfunción Temporomandibular';
@@ -143,7 +149,28 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     return AppColors.error;
   }
 
-  void _showResults() async {
+  void _setAllAnswers(String answer) {
+    setState(() {
+      for (var q in _questions) {
+        q['answer'] = answer;
+      }
+    });
+  }
+
+  void _guardarYMostrarResultados() async {
+    final sinResponder = _questions.where((q) => q['answer'] == null).length;
+    if (sinResponder > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Por favor responde las $sinResponder preguntas restantes'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
     final score = _calculateScore();
     final diagnosis = _getDiagnosis(score);
     final severityColor = _getSeverityColor(score);
@@ -171,6 +198,8 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
       await supabase.from('evaluaciones').upsert(evaluacionData);
     } catch (e) {
       debugPrint('Error al guardar evaluación en Supabase: $e');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
@@ -313,21 +342,6 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     }
   }
 
-  void _selectAnswer(String answer) {
-    setState(() {
-      _questions[_currentQuestionIndex]['answer'] = answer;
-    });
-
-    if (_currentQuestionIndex < _questions.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _showResults();
-    }
-  }
-
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
       labelText: label,
@@ -342,7 +356,11 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (_currentQuestionIndex + 1) / _questions.length;
+    final int score = _calculateScore();
+    final int answered = _countAnswered();
+    final double progress = answered / _questions.length;
+    final Color severityColor = _getSeverityColor(score);
+    final String currentDiagnosis = _getDiagnosis(score);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -378,7 +396,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                   ),
                 ),
                 Text(
-                  'Test Anamnésico de Fonseca',
+                  'Test Anamnésico de Fonseca (Modo Rápido)',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -392,19 +410,19 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
       body: SafeArea(
         child: _loadingPacientes
             ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-            : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Patient Selection Top Card
+                    // Top Patient Selection & Diagnostic Status Card
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: const [
-                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 18, offset: Offset(0, 6)),
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                         ],
                       ),
                       child: Column(
@@ -414,7 +432,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                             'Paciente Evaluado:',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           DropdownButtonFormField<Paciente>(
                             value: _pacienteSeleccionado,
                             decoration: _inputDecoration('Seleccionar Paciente'),
@@ -429,16 +447,43 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                               if (val != null) setState(() => _pacienteSeleccionado = val);
                             },
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Progress Bar
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Progreso: $answered / ${_questions.length} respondidas',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    currentDiagnosis,
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: severityColor),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: severityColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  '$score pts',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: severityColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: LinearProgressIndicator(
                               value: progress,
@@ -447,85 +492,230 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '${_currentQuestionIndex + 1}/${_questions.length}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Quick Fill Bar (Acciones Rápidas)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 12, offset: Offset(0, 4)),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.flash_on, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Llenado Rápido:',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                            ),
                           ),
-                        ),
-                      ],
+                          InkWell(
+                            onTap: () => _setAllAnswers('No'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                              ),
+                              child: const Text(
+                                'Todo "No"',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _setAllAnswers('A veces'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                              ),
+                              child: const Text(
+                                'Todo "A veces"',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warning),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Lista continua de las 10 preguntas
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _questions.length,
+                      itemBuilder: (context, index) {
+                        final q = _questions[index];
+                        final String? selectedAnswer = q['answer'];
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.shadowSoft,
+                                blurRadius: 16,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      q['question'],
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.onSurface,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Segmented Options: Sí (10 pts) | A veces (5 pts) | No (0 pts)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildChoiceChip(
+                                      text: 'Sí (+10)',
+                                      value: 'Sí',
+                                      isSelected: selectedAnswer == 'Sí',
+                                      activeColor: AppColors.error,
+                                      onTap: () => setState(() => q['answer'] = 'Sí'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildChoiceChip(
+                                      text: 'A veces (+5)',
+                                      value: 'A veces',
+                                      isSelected: selectedAnswer == 'A veces',
+                                      activeColor: AppColors.warning,
+                                      onTap: () => setState(() => q['answer'] = 'A veces'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildChoiceChip(
+                                      text: 'No (0)',
+                                      value: 'No',
+                                      isSelected: selectedAnswer == 'No',
+                                      activeColor: AppColors.success,
+                                      onTap: () => setState(() => q['answer'] = 'No'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 20),
 
-                    // Question Cards PageView
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentQuestionIndex = index;
-                          });
-                        },
-                        itemCount: _questions.length,
-                        itemBuilder: (context, index) {
-                          final question = _questions[index];
-                          final currentAnswer = question['answer'];
-
-                          return Container(
-                            padding: const EdgeInsets.all(28),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: AppColors.shadowSoft,
-                                  blurRadius: 24,
-                                  offset: Offset(0, 8),
-                                ),
+                    // Submit Button (Guardar y Ver Diagnóstico)
+                    GestureDetector(
+                      onTapDown: (_) => setState(() => _btnScale = 0.98),
+                      onTapUp: (_) => setState(() => _btnScale = 1.0),
+                      onTapCancel: () => setState(() => _btnScale = 1.0),
+                      child: AnimatedScale(
+                        scale: _btnScale,
+                        duration: const Duration(milliseconds: 120),
+                        child: Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.primaryContainer,
                               ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Pregunta ${index + 1}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                    letterSpacing: 1.0,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.shadowSoft,
+                                blurRadius: 20,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: _isSaving ? null : _guardarYMostrarResultados,
+                            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
+                            label: _isSaving
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                  )
+                                : const Text(
+                                    'Guardar y Generar Diagnóstico',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  question['question'],
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.onSurface,
-                                    height: 1.3,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 36),
-
-                                // Option Buttons
-                                _buildOptionButton('Sí', currentAnswer == 'Sí'),
-                                const SizedBox(height: 12),
-                                _buildOptionButton('A veces', currentAnswer == 'A veces'),
-                                const SizedBox(height: 12),
-                                _buildOptionButton('No', currentAnswer == 'No'),
-                              ],
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -533,37 +723,43 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     );
   }
 
-  Widget _buildOptionButton(String text, bool isSelected) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _btnScale = 0.98),
-      onTapUp: (_) => setState(() => _btnScale = 1.0),
-      onTapCancel: () => setState(() => _btnScale = 1.0),
-      child: AnimatedScale(
-        scale: _btnScale,
-        duration: const Duration(milliseconds: 120),
-        child: Container(
-          width: double.infinity,
-          height: 52,
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryContainer : AppColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(26),
+  Widget _buildChoiceChip({
+    required String text,
+    required String value,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : AppColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? activeColor : AppColors.ghostOutline,
+            width: isSelected ? 1.5 : 1.0,
           ),
-          child: ElevatedButton(
-            onPressed: () => _selectAnswer(text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(26),
-              ),
-            ),
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : AppColors.onSurface,
-              ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              color: isSelected ? Colors.white : AppColors.onSurface,
             ),
           ),
         ),

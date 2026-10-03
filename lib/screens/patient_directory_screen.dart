@@ -91,6 +91,26 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
       }
     } catch (e) {
       debugPrint('Error al cargar directorio de pacientes: $e');
+      if (mounted) {
+        final errStr = e.toString();
+        if (errStr.contains('row-level security') || errStr.contains('42501')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Permisos de Supabase: Ejecuta "ALTER TABLE public.pacientes DISABLE ROW LEVEL SECURITY;" en el SQL Editor de Supabase.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 6),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al conectar con Supabase: $e'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
     } finally {
       if (mounted) setState(() => _isLoadingPacientes = false);
     }
