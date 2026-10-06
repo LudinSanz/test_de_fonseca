@@ -5,8 +5,6 @@ on:
     branches:
       - main
       - master
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -27,22 +25,17 @@ jobs:
           java-version: '17'
 
       - name: Set up Flutter SDK
-        id: flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          cache: true
+          cache: false
 
-      - name: Setup Android Keystore and local.properties
+      - name: Setup Android Keystore
         run: |
           mkdir -p ~/.android
           if [ ! -f ~/.android/debug.keystore ]; then
             keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          fi
-          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-          if [ -n "$ANDROID_HOME" ]; then
-            echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
           fi
 
       - name: Get Dependencies
@@ -59,16 +52,17 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Versión Rizo Dental ${{ github.ref_name }}
+          tag_name: v1.0.${{ github.run_number }}
+          name: Versión Automática v1.0.${{ github.run_number }}
           make_latest: true
           body: |
-            🎉 **Nueva versión Rizo Dental Sanctuary compilada en la nube**
+            🎉 **Nueva versión Rizo Dental Sanctuary compilada automáticamente en la nube**
             
             - Número oficial de clínica: +502 5981-6632
             - Descarga e instala `app-release.apk` en tu dispositivo Android.
+            - Compilado automáticamente desde la rama principal.
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
