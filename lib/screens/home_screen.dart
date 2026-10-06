@@ -14,6 +14,7 @@ import 'profile_screen.dart';
 import 'help_screen.dart';
 import 'patient_history_screen.dart';
 import 'patient_directory_screen.dart';
+import 'treatments_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
 import '../constants/colors.dart';
@@ -123,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()),
+          MaterialPageRoute(builder: (context) => const TreatmentsScreen()),
         );
         break;
       case 3:
