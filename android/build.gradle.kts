@@ -1,12 +1,3 @@
-class FlutterExtensionDummy {
-    val compileSdkVersion = 34
-    val targetSdkVersion = 34
-    val minSdkVersion = 23
-    val ndkVersion = "25.1.8937393"
-}
-
-extra.set("flutter", FlutterExtensionDummy())
-
 allprojects {
     repositories {
         google()

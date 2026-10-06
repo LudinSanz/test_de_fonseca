@@ -22,8 +22,8 @@ android {
         applicationId = "com.example.test_de_fonseca"
         minSdk = 23
         targetSdk = 34
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = (flutter.versionCode ?: 7)
+        versionName = (flutter.versionName ?: "1.0.6")
     }
 
     buildTypes {
