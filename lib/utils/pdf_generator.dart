@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -71,7 +72,7 @@ class PdfGenerator {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return pw.Column(
-            cross.dart: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               // Header con Logo Rizo Dental
               pw.Row(
