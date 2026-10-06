@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "com.example.test_de_fonseca"
     compileSdk = 34
-    buildToolsVersion = "36.0.0"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -29,19 +29,6 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-subprojects {
-    plugins.withId("com.android.application") {
-        configure<com.android.build.api.dsl.ApplicationExtension> {
-            buildToolsVersion = "36.0.0"
-        }
-    }
-    plugins.withId("com.android.library") {
-        configure<com.android.build.api.dsl.LibraryExtension> {
-            buildToolsVersion = "36.0.0"
-        }
-    }
-}
-
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
