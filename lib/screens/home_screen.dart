@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (_) {}
 
       final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
-      final String tel = data?['telefono_whatsapp_clinica'] ?? data?['telefono'] ?? '+502 5555 8888';
+      final String tel = data?['telefono_whatsapp_clinica'] ?? data?['telefono'] ?? '+502 5981-6632';
       final cleanTel = tel.replaceAll(RegExp(r'[^\d+]'), '');
 
       final uri = Uri.parse('https://wa.me/$cleanTel?text=Hola%20Rizo%20Dental%20Sanctuary%2C%20deseo%20realizar%20una%20consulta.');

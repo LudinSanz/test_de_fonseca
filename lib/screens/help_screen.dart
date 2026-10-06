@@ -6,7 +6,7 @@ class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
   Future<void> _contactarSoporteWhatsApp() async {
-    const String tel = '50255551234';
+    const String tel = '50259816632';
     final String msg = Uri.encodeComponent('Hola Rizo Dental, necesito soporte con la aplicación de evaluación clínica ATM.');
     final Uri waUri = Uri.parse('https://wa.me/$tel?text=$msg');
     if (await canLaunchUrl(waUri)) {

@@ -18,8 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _nombreController = TextEditingController(text: 'Dr. Ludin Solis');
   final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
   final TextEditingController _colegiadoController = TextEditingController(text: 'COL-98421');
-  final TextEditingController _telefonoController = TextEditingController(text: '+502 5555 9999');
-  final TextEditingController _whatsappClinicaController = TextEditingController(text: '+502 5555 8888');
+  final TextEditingController _telefonoController = TextEditingController(text: '+502 5981-6632');
+  final TextEditingController _whatsappClinicaController = TextEditingController(text: '+502 5981-6632');
   final TextEditingController _emailController = TextEditingController(text: 'doctor@clinic.gt');
   final TextEditingController _direccionController = TextEditingController(text: 'Edificio Sixtino II, Nivel 7, Oficina 702, Zona 10, Guatemala');
 

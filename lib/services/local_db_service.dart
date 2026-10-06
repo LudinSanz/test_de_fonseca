@@ -291,7 +291,7 @@ class LocalDbService {
       'email': 'doctor@clinic.gt',
       'colegiado': 'COL-98421',
       'especialidad': 'Especialista en Disfunción ATM y Odontología Estética',
-      'telefono': '+502 5555 9999',
+      'telefono': '+502 5981-6632',
       'direccion_clinica': 'Edificio Médico Plazuela, Nivel 5, Oficina 502',
     };
   }
