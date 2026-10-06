@@ -43,8 +43,7 @@ jobs:
 
       - name: Create local.properties
         run: |
-          FLUTTER_PATH=$(dirname $(dirname $(which flutter)))
-          echo "flutter.sdk=$FLUTTER_PATH" > android/local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
           echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
           echo "flutter.versionCode=7" >> android/local.properties
           echo "flutter.versionName=1.0.6" >> android/local.properties
@@ -55,7 +54,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --no-pub --verbose
+        run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
