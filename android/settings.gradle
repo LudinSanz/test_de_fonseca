@@ -12,8 +12,15 @@ pluginManagement {
             sdkPath = System.getenv("FLUTTER_ROOT") ?: System.getenv("FLUTTER_HOME") ?: System.getenv("FLUTTER_SDK_PATH")
         }
         if (sdkPath == null || sdkPath.isEmpty()) {
+            def hostedCache = new File("/opt/hostedtoolcache/flutter/3.24.0-stable/x64")
+            if (hostedCache.exists()) {
+                sdkPath = hostedCache.absolutePath
+            }
+        }
+        if (sdkPath == null || sdkPath.isEmpty()) {
             try {
-                def flutterBin = "which flutter".execute().text.trim()
+                def cmd = System.getProperty("os.name").toLowerCase().contains("win") ? "where flutter" : "which flutter"
+                def flutterBin = cmd.execute().text.trim().split("\n")[0].trim()
                 if (flutterBin && new File(flutterBin).exists()) {
                     sdkPath = new File(flutterBin).parentFile?.parentFile?.absolutePath
                 }
