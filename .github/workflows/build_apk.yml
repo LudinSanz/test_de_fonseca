@@ -49,7 +49,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          flutter build apk --release --no-tree-shake-icons --verbose > build_log.txt 2>&1 || (echo "=== BUILD LOG FAILURE TAIL ===" && tail -n 250 build_log.txt && exit 1)
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
