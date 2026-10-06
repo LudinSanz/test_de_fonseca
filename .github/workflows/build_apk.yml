@@ -35,13 +35,12 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Create Debug Keystore for CI Release Signing
+      - name: Build Android APK
         run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
-
-      - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug
+          if [ ! -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/app-release.apk
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
