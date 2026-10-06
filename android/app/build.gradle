@@ -13,14 +13,12 @@ if (localPropertiesFile.exists()) {
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '7'
+def parsedVersionCode = 7
+if (flutterVersionCode != null && flutterVersionCode.isInteger()) {
+    parsedVersionCode = flutterVersionCode.toInteger()
 }
 
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0.6'
-}
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0.6'
 
 android {
     namespace "com.example.test_de_fonseca"
@@ -39,7 +37,7 @@ android {
         applicationId "com.example.test_de_fonseca"
         minSdk 21
         targetSdk 34
-        versionCode flutterVersionCode.toInteger()
+        versionCode parsedVersionCode
         versionName flutterVersionName
     }
 
