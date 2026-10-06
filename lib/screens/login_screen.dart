@@ -396,7 +396,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'The Clinical Sanctuary • Test de Fonseca',
+                      'Gestión Clínica • Test de Fonseca',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

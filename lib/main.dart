@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
-            title: 'ATM - Test de Fonseca',
+            title: 'Rizo Dental',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               useMaterial3: true,
