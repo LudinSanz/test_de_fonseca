@@ -51,6 +51,8 @@ android {
                 storeFile homeKeystore
             } else if (localKeystore.exists()) {
                 storeFile localKeystore
+            } else {
+                storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
             }
             storePassword "android"
             keyAlias "androiddebugkey"
