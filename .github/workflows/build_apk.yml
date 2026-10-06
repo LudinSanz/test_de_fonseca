@@ -27,17 +27,22 @@ jobs:
           java-version: '17'
 
       - name: Set up Flutter SDK
+        id: flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
 
-      - name: Setup Android Keystore
+      - name: Setup Android Keystore and local.properties
         run: |
           mkdir -p ~/.android
           if [ ! -f ~/.android/debug.keystore ]; then
             keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+          if [ -n "$ANDROID_HOME" ]; then
+            echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
           fi
 
       - name: Get Dependencies
