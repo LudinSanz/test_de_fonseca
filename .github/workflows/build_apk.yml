@@ -35,8 +35,8 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Accept Android Licenses
-        run: yes | flutter doctor --android-licenses || true
+      - name: Make Gradle Wrapper Executable
+        run: chmod +x android/gradlew
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
