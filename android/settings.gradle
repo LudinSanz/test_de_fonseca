@@ -7,8 +7,19 @@ pluginManagement {
                 properties.load(reader)
             }
         }
-        def sdkPath = properties.getProperty("flutter.sdk") ?: System.getenv("FLUTTER_ROOT")
-        if (sdkPath == null) {
+        def sdkPath = properties.getProperty("flutter.sdk")
+        if (sdkPath == null || sdkPath.isEmpty()) {
+            sdkPath = System.getenv("FLUTTER_ROOT") ?: System.getenv("FLUTTER_HOME") ?: System.getenv("FLUTTER_SDK_PATH")
+        }
+        if (sdkPath == null || sdkPath.isEmpty()) {
+            try {
+                def flutterBin = "which flutter".execute().text.trim()
+                if (flutterBin && new File(flutterBin).exists()) {
+                    sdkPath = new File(flutterBin).parentFile?.parentFile?.absolutePath
+                }
+            } catch (Exception ignored) {}
+        }
+        if (sdkPath == null || sdkPath.isEmpty()) {
             throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in local.properties or FLUTTER_ROOT environment variable.")
         }
         return sdkPath

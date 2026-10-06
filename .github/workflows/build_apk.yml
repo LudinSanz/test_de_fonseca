@@ -32,12 +32,22 @@ jobs:
           channel: 'stable'
           cache: false
 
+      - name: Setup Android Keystore
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Get Dependencies
-        run: flutter pub get
+        run: |
+          export FLUTTER_ROOT=$FLUTTER_HOME
+          flutter pub get
 
       - name: Build Android APK
         run: |
-          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug
+          export FLUTTER_ROOT=$FLUTTER_HOME
+          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug --no-tree-shake-icons
           if [ ! -f build/app/outputs/flutter-apk/app-release.apk ]; then
             cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/app-release.apk
           fi
