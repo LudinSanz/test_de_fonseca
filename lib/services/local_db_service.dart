@@ -272,9 +272,15 @@ class LocalDbService {
   static Future<Map<String, dynamic>?> getDoctorProfile(String idOrEmail) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString('${_keyUsers}_$idOrEmail');
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        return Map<String, dynamic>.from(jsonDecode(jsonStr));
+      if (idOrEmail.isNotEmpty) {
+        final String? jsonStr = prefs.getString('${_keyUsers}_$idOrEmail');
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          return Map<String, dynamic>.from(jsonDecode(jsonStr));
+        }
+      }
+      final String? activeJsonStr = prefs.getString('${_keyUsers}_active_doctor');
+      if (activeJsonStr != null && activeJsonStr.isNotEmpty) {
+        return Map<String, dynamic>.from(jsonDecode(activeJsonStr));
       }
     } catch (e) {
       debugPrint('Error leyendo perfil doctor: $e');
@@ -295,11 +301,20 @@ class LocalDbService {
       final prefs = await SharedPreferences.getInstance();
       final String id = doctorData['id']?.toString() ?? 'usr_doctor_demo';
       final String email = doctorData['email']?.toString() ?? '';
-      final String jsonStr = jsonEncode(doctorData);
+
+      Map<String, dynamic> existing = {};
+      if (email.isNotEmpty) {
+        final ex = prefs.getString('${_keyUsers}_$email');
+        if (ex != null && ex.isNotEmpty) existing = Map<String, dynamic>.from(jsonDecode(ex));
+      }
+      final mergedData = {...existing, ...doctorData};
+      final String jsonStr = jsonEncode(mergedData);
+
       await prefs.setString('${_keyUsers}_$id', jsonStr);
       if (email.isNotEmpty) {
         await prefs.setString('${_keyUsers}_$email', jsonStr);
       }
+      await prefs.setString('${_keyUsers}_active_doctor', jsonStr);
     } catch (e) {
       debugPrint('Error guardando perfil doctor: $e');
     }

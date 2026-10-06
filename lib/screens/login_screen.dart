@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/supabase_service.dart';
+import '../services/local_db_service.dart';
 import '../constants/colors.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
@@ -24,8 +25,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController.text = 'doctor@clinic.gt';
-    _passwordController.text = 'password123';
+    _cargarUltimoUsuario();
+  }
+
+  Future<void> _cargarUltimoUsuario() async {
+    final activeDoc = await LocalDbService.getDoctorProfile('');
+    if (activeDoc != null && activeDoc['email'] != null && activeDoc['email'].toString().isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _emailController.text = activeDoc['email'];
+        });
+      }
+    }
   }
 
   @override

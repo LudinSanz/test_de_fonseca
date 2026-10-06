@@ -13,19 +13,20 @@ class AuthService {
   }
 
   Future<User?> login(String email, String password) async {
+    final cleanEmail = email.trim();
     try {
       if (_supabase != null) {
         final response = await _supabase!.auth.signInWithPassword(
-          email: email,
+          email: cleanEmail,
           password: password,
         );
         final suUser = response.user;
         if (suUser != null) {
           final name = suUser.userMetadata?['name'] ?? suUser.email?.split('@').first ?? 'Usuario';
-          await guardarPerfilUsuario(suUser.id, suUser.email ?? '', name);
+          await guardarPerfilUsuario(suUser.id, suUser.email ?? cleanEmail, name);
           return User(
             id: suUser.id,
-            email: suUser.email ?? '',
+            email: suUser.email ?? cleanEmail,
             name: name,
           );
         }
@@ -34,32 +35,34 @@ class AuthService {
       print('Aviso en login Supabase: $e');
     }
 
-    // Fallback de demostración / ingreso garantizado para pruebas
-    final userName = email.contains('@') ? email.split('@').first : 'Usuario';
+    final rawName = cleanEmail.contains('@') ? cleanEmail.split('@').first : 'Usuario';
+    final formattedName = rawName.isNotEmpty ? rawName[0].toUpperCase() + rawName.substring(1) : 'Usuario';
     final user = User(
-      id: 'usr_${email.hashCode.abs()}',
-      email: email,
-      name: userName == 'doctor' ? 'Dr. Ludin Solis' : userName,
+      id: 'usr_${cleanEmail.hashCode.abs()}',
+      email: cleanEmail,
+      name: formattedName,
     );
     await guardarPerfilUsuario(user.id, user.email, user.name);
     return user;
   }
 
   Future<User?> register(String name, String email, String password) async {
+    final cleanEmail = email.trim();
+    final cleanName = name.trim();
     try {
       if (_supabase != null) {
         final response = await _supabase!.auth.signUp(
-          email: email,
+          email: cleanEmail,
           password: password,
-          data: {'name': name},
+          data: {'name': cleanName},
         );
         final suUser = response.user;
         if (suUser != null) {
-          await guardarPerfilUsuario(suUser.id, suUser.email ?? '', name);
+          await guardarPerfilUsuario(suUser.id, suUser.email ?? cleanEmail, cleanName);
           return User(
             id: suUser.id,
-            email: suUser.email ?? '',
-            name: name,
+            email: suUser.email ?? cleanEmail,
+            name: cleanName,
           );
         }
       }
@@ -68,9 +71,9 @@ class AuthService {
     }
 
     final user = User(
-      id: 'usr_${email.hashCode.abs()}',
-      email: email,
-      name: name.isNotEmpty ? name : 'Dr. Ludin Solis',
+      id: 'usr_${cleanEmail.hashCode.abs()}',
+      email: cleanEmail,
+      name: cleanName.isNotEmpty ? cleanName : cleanEmail.split('@').first,
     );
     await guardarPerfilUsuario(user.id, user.email, user.name);
     return user;
