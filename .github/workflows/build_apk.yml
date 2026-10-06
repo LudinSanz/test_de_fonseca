@@ -48,13 +48,20 @@ jobs:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      - name: Create Git Tag for Release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          TAG_NAME="v1.0.${{ github.run_number }}"
+          git tag -f "$TAG_NAME"
+          git push -f origin "$TAG_NAME" || true
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           tag_name: v1.0.${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
           name: Versión Automática v1.0.${{ github.run_number }}
+          make_latest: true
           body: |
             🎉 **Nueva versión compilada automáticamente en la nube**
             
