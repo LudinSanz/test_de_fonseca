@@ -247,11 +247,17 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       Map<String, dynamic> doctorInfoFinal = Map<String, dynamic>.from(doctorRes ?? {});
       doctorInfoFinal['firma_digital'] = firmaDigitalConfirmada;
 
+      Uint8List? signaturePng;
+      if (_hasScreenSignature) {
+        signaturePng = await PdfGenerator.signaturePointsToPngBytes(_signaturePoints);
+      }
+
       await PdfGenerator.generarPdfReceta(
         paciente: _pacienteSeleccionado!,
         medicamentos: _medicamentos,
         indicaciones: _indicacionesGeneralesController.text.trim(),
         doctorInfo: doctorInfoFinal,
+        signatureImageBytes: signaturePng,
       );
     }
   }

@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -15,6 +16,34 @@ class PdfGenerator {
     }
   }
 
+  // Convierte los puntos dibujados en la pantalla a una imagen PNG para el PDF
+  static Future<Uint8List?> signaturePointsToPngBytes(List<Offset?> points, {double width = 300, double height = 120}) async {
+    final validPoints = points.where((p) => p != null).toList();
+    if (validPoints.isEmpty) return null;
+
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
+      final paint = Paint()
+        ..color = const Color(0xFF003F87)
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 3.5;
+
+      for (int i = 0; i < points.length - 1; i++) {
+        if (points[i] != null && points[i + 1] != null) {
+          canvas.drawLine(points[i]!, points[i + 1]!, paint);
+        }
+      }
+
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(width.toInt(), height.toInt());
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      return null;
+    }
+  }
+
   // -------------------------------------------------------------
   // 1. GENERAR PDF TEST DE FONSECA (ATM) - RIZO DENTAL SANCTUARY
   // -------------------------------------------------------------
@@ -27,21 +56,24 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
     final logoImage = await _loadLogoImage();
-    final fechaStr = DateTime.now().toString().split(' ')[0];
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pageTheme = pw.ThemeData.withFont(base: fontRegular, bold: fontBold);
 
+    final fechaStr = DateTime.now().toString().split(' ')[0];
     final primaryColor = PdfColor.fromHex('#003F87');
     final surfaceContainerLow = PdfColor.fromHex('#F3F4F5');
-    final textDark = PdfColor.fromHex('#191C1D');
 
     pdf.addPage(
       pw.Page(
+        theme: pageTheme,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            cross.dart: pw.CrossAxisAlignment.start,
             children: [
-              // Header con Logo Rizo Dental y Título Editorial
+              // Header con Logo Rizo Dental
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -66,7 +98,7 @@ class PdfGenerator {
                             ),
                           ),
                           pw.Text(
-                            'The Clinical Sanctuary • Evaluación Anamnésica ATM',
+                            'The Clinical Sanctuary • Evaluación Anamnésica ATM (Test de Fonseca)',
                             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                           ),
                         ],
@@ -82,13 +114,13 @@ class PdfGenerator {
                   ),
                 ],
               ),
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 14),
               pw.Container(height: 2, color: primaryColor),
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 14),
 
               // Ficha del Paciente Evaluado
               pw.Container(
-                padding: const pw.EdgeInsets.all(16),
+                padding: const pw.EdgeInsets.all(14),
                 decoration: pw.BoxDecoration(
                   color: surfaceContainerLow,
                   borderRadius: pw.BorderRadius.circular(12),
@@ -99,93 +131,62 @@ class PdfGenerator {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('PACIENTE EVALUADO', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.Text('${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: textDark)),
-                        pw.Text('Tel: ${paciente.telefono} • Email: ${paciente.email}', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text('PACIENTE', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text('${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Teléfono: ${paciente.telefono} • Email: ${paciente.email}', style: const pw.TextStyle(fontSize: 9)),
                       ],
                     ),
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('DOCTOR EVALUADOR', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.Text(doctorInfo?['name'] ?? 'Dr. Especialista Rizo Dental', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Colegiado: #${doctorInfo?['colegiado'] ?? "14890"}', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text('PUNTUACIÓN FONSECA', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text('$score / 100 Puntos', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text(diagnostico, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
                       ],
                     ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 16),
 
-              // Tarjeta de Diagnóstico ATM
-              pw.Container(
-                padding: const pw.EdgeInsets.all(16),
-                decoration: pw.BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: pw.BorderRadius.circular(12),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('PUNTUACIÓN ANAMNÉSICA DE FONSECA', style: const pw.TextStyle(fontSize: 10, color: PdfColors.white)),
-                        pw.Text('$score / 100 PUNTOS', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                      ],
-                    ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text('DIAGNÓSTICO ATM', style: const pw.TextStyle(fontSize: 10, color: PdfColors.white)),
-                        pw.Text(diagnostico, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Desglose de Preguntas y Respuestas
-              pw.Text('DESGLOSE DE CUESTIONARIO FONSECA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+              // Cuestionario de Preguntas y Respuestas
+              pw.Text('DESGLOSE ANAMNÉSICO DE RESPUESTAS:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
               pw.SizedBox(height: 8),
 
               for (var i = 0; i < preguntas.length; i++)
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                  margin: const pw.EdgeInsets.only(bottom: 4),
+                  margin: const pw.EdgeInsets.only(bottom: 6),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: pw.BoxDecoration(
-                    color: i % 2 == 0 ? surfaceContainerLow : PdfColors.white,
+                    color: i % 2 == 0 ? PdfColors.grey100 : PdfColors.white,
                     borderRadius: pw.BorderRadius.circular(6),
+                    border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
                   ),
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Expanded(
-                        child: pw.Text('${i + 1}. ${preguntas[i]['question']}', style: const pw.TextStyle(fontSize: 10)),
+                        child: pw.Text(
+                          '${i + 1}. ${preguntas[i]['pregunta']}',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
                       ),
                       pw.Text(
-                        preguntas[i]['answer'] ?? 'No respondido',
-                        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
+                        '${preguntas[i]['respuesta']}',
+                        style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor),
                       ),
                     ],
                   ),
                 ),
 
               pw.Spacer(),
-
-              // Pie de Página con Firma Digital
+              pw.Container(height: 1, color: PdfColors.grey400),
+              pw.SizedBox(height: 6),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('FIRMA Y SELLO DE VALIDEZ DIGITAL', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                      pw.Text(doctorInfo?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal', style: const pw.TextStyle(fontSize: 9)),
-                    ],
-                  ),
-                  pw.Text('Documento Clínico Oficial • Rizo Dental', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('Doctor tratante: ${doctorInfo?['name'] ?? "Dr. Ludin Solis"} (Colegiado #${doctorInfo?['colegiado'] ?? "98421"})', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                  pw.Text('Rizo Dental Sanctuary • Guatemala GTQ', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                 ],
               ),
             ],
@@ -201,30 +202,36 @@ class PdfGenerator {
   }
 
   // -------------------------------------------------------------
-  // 2. GENERAR PDF DE REPORTE DE CITA ODONTOLÓGICA
+  // 2. GENERAR PDF CONFIRMACIÓN DE CITA
   // -------------------------------------------------------------
   static Future<void> generarPdfCita({
     required Paciente paciente,
-    required String fechaHora,
-    required String motivo,
-    required String notas,
+    required String fechaCita,
+    required String horaCita,
+    required String servicio,
+    required String profesional,
     required String estado,
+    required String notas,
     required Map<String, dynamic>? doctorInfo,
   }) async {
     final pdf = pw.Document();
     final logoImage = await _loadLogoImage();
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pageTheme = pw.ThemeData.withFont(base: fontRegular, bold: fontBold);
+
     final primaryColor = PdfColor.fromHex('#003F87');
     final surfaceContainerLow = PdfColor.fromHex('#F3F4F5');
 
     pdf.addPage(
       pw.Page(
+        theme: pageTheme,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Header
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -241,19 +248,17 @@ class PdfGenerator {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('The Clinical Sanctuary • Comprobante de Cita Odontológica', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text('The Clinical Sanctuary • Confirmación Oficial de Cita', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                         ],
                       ),
                     ],
                   ),
-                  pw.Text('COMPROBANTE OFICIAL', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                 ],
               ),
               pw.SizedBox(height: 16),
               pw.Container(height: 2, color: primaryColor),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 16),
 
-              // Datos del Paciente
               pw.Container(
                 padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
@@ -263,69 +268,22 @@ class PdfGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('INFORMACIÓN DEL PACIENTE', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                    pw.SizedBox(height: 6),
-                    pw.Text('${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('Teléfono: ${paciente.telefono} • Email: ${paciente.email}', style: const pw.TextStyle(fontSize: 11)),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Detalles de la Cita
-              pw.Container(
-                padding: const pw.EdgeInsets.all(16),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: primaryColor, width: 1.5),
-                  borderRadius: pw.BorderRadius.circular(12),
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
                     pw.Text('DETALLES DE LA CITA PROGRAMADA', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                     pw.SizedBox(height: 10),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Fecha y Hora:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text(fechaHora, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                      ],
-                    ),
-                    pw.SizedBox(height: 6),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Motivo de Consulta:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text(motivo, style: const pw.TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    pw.SizedBox(height: 6),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Estado:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text(estado, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
-                      ],
-                    ),
-                    if (notas.isNotEmpty) ...[
-                      pw.SizedBox(height: 8),
-                      pw.Text('Notas Adicionales: $notas', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
-                    ],
+                    pw.Text('Paciente: ${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Servicio: $servicio', style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('Fecha y Hora: $fechaCita - $horaCita', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    pw.Text('Profesional Asignado: $profesional', style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('Estado: $estado', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
+                    if (notas.isNotEmpty) pw.Text('Notas: $notas', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 30),
-
-              // Información de la Clínica
-              pw.Text('UBICACIÓN Y ATENCIÓN CLÍNICA', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-              pw.SizedBox(height: 6),
-              pw.Text(doctorInfo?['direccion_clinica'] ?? 'Clínica Rizo Dental Sanctuary', style: const pw.TextStyle(fontSize: 11)),
-              pw.Text('Atendido por: ${doctorInfo?['name'] ?? "Dr. Rizo Dental"} (${doctorInfo?['especialidad'] ?? "ATM & Odontología"})', style: const pw.TextStyle(fontSize: 11)),
 
               pw.Spacer(),
               pw.Divider(),
               pw.Center(
-                child: pw.Text('Rizo Dental Sanctuary • Confirmación Oficial de Cita', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                child: pw.Text('Rizo Dental Sanctuary • Edificio Sixtino II, Zona 10, Guatemala (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
               ),
             ],
           );
@@ -335,27 +293,40 @@ class PdfGenerator {
 
     await Printing.sharePdf(
       bytes: await pdf.save(),
-      filename: 'cita_odontologica_${paciente.nombre.replaceAll(' ', '_')}.pdf',
+      filename: 'cita_${paciente.nombre.replaceAll(' ', '_')}.pdf',
     );
   }
 
   // -------------------------------------------------------------
-  // 3. GENERAR PDF DE RECETA MÉDICA ODONTOLÓGICA
+  // 3. GENERAR PDF DE RECETA MÉDICA ODONTOLÓGICA CON FIRMA DIGITAL
   // -------------------------------------------------------------
   static Future<void> generarPdfReceta({
     required Paciente paciente,
     required List<Map<String, dynamic>> medicamentos,
     required String indicaciones,
     required Map<String, dynamic>? doctorInfo,
+    Uint8List? signatureImageBytes,
   }) async {
     final pdf = pw.Document();
     final logoImage = await _loadLogoImage();
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pageTheme = pw.ThemeData.withFont(base: fontRegular, bold: fontBold);
+
     final primaryColor = PdfColor.fromHex('#003F87');
     final surfaceContainerLow = PdfColor.fromHex('#F3F4F5');
     final fechaStr = DateTime.now().toString().split(' ')[0];
 
+    pw.MemoryImage? signaturePwImage;
+    if (signatureImageBytes != null && signatureImageBytes.isNotEmpty) {
+      try {
+        signaturePwImage = pw.MemoryImage(signatureImageBytes);
+      } catch (_) {}
+    }
+
     pdf.addPage(
       pw.Page(
+        theme: pageTheme,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
@@ -419,17 +390,17 @@ class PdfGenerator {
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
                         pw.Text('DOCTOR PRESCRIPTOR', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.Text(doctorInfo?['name'] ?? 'Dr. Rizo Dental', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Colegiado: #${doctorInfo?['colegiado'] ?? "14890"}', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text(doctorInfo?['name'] ?? 'Dr. Ludin Solis', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Colegiado: #${doctorInfo?['colegiado'] ?? "COL-98421"}', style: const pw.TextStyle(fontSize: 10)),
                       ],
                     ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 24),
+              pw.SizedBox(height: 20),
 
               // Tabla de Medicamentos Prescritos
-              pw.Text('MEDICAMENTOS PRESCRITOS', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+              pw.Text('MEDICAMENTOS PRESCRITOS:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
               pw.SizedBox(height: 10),
 
               for (var m in medicamentos)
@@ -462,7 +433,7 @@ class PdfGenerator {
                 ),
 
               if (indicaciones.isNotEmpty) ...[
-                pw.SizedBox(height: 16),
+                pw.SizedBox(height: 12),
                 pw.Text('INDICACIONES GENERALES DEL DOCTOR:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                 pw.SizedBox(height: 4),
                 pw.Text(indicaciones, style: const pw.TextStyle(fontSize: 11)),
@@ -470,19 +441,47 @@ class PdfGenerator {
 
               pw.Spacer(),
 
-              // Firma Digital del Doctor
+              // FIRMA DIGITAL DEL DOCTOR E IMPRESIÓN DEL CANVAS
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text('FIRMA DIGITAL Y SELLO PROFESIONAL', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                      pw.SizedBox(height: 6),
+
+                      // Si se proporciona la firma dibujada en pantalla, se incrusta la imagen PNG
+                      if (signaturePwImage != null)
+                        pw.Container(
+                          height: 55,
+                          width: 160,
+                          padding: const pw.EdgeInsets.all(4),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: PdfColors.grey400, width: 0.8),
+                            borderRadius: pw.BorderRadius.circular(6),
+                          ),
+                          child: pw.Image(signaturePwImage, fit: pw.BoxFit.contain),
+                        )
+                      else
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(6),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: PdfColors.grey400, width: 0.8),
+                            borderRadius: pw.BorderRadius.circular(6),
+                          ),
+                          child: pw.Text(
+                            doctorInfo?['firma_digital'] ?? '${doctorInfo?['name']} - Colegiado #${doctorInfo?['colegiado']}',
+                            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                          ),
+                        ),
+
                       pw.SizedBox(height: 4),
-                      pw.Text(doctorInfo?['firma_digital'] ?? '${doctorInfo?['name']} - Colegiado #${doctorInfo?['colegiado']}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      pw.Text('${doctorInfo?['name'] ?? "Dr. Ludin Solis"} • Colegiado #${doctorInfo?['colegiado'] ?? "COL-98421"}', style: const pw.TextStyle(fontSize: 9)),
                     ],
                   ),
-                  pw.Text('Rizo Dental Sanctuary • Receta Médica Oficial', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('Rizo Dental Sanctuary • Guatemala GTQ (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                 ],
               ),
             ],
@@ -494,6 +493,163 @@ class PdfGenerator {
     await Printing.sharePdf(
       bytes: await pdf.save(),
       filename: 'receta_medica_${paciente.nombre.replaceAll(' ', '_')}.pdf',
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 4. GENERAR PDF ESTADO DE CUENTA Y PRESUPUESTO EN QUETZALES (GTQ / Q)
+  // -------------------------------------------------------------
+  static Future<void> generarPdfEstadoCuenta({
+    required Paciente paciente,
+    required double subtotal,
+    required double descuento,
+    required double totalPagado,
+    required List<Map<String, dynamic>> items,
+    required Map<String, dynamic>? doctorInfo,
+  }) async {
+    final pdf = pw.Document();
+    final logoImage = await _loadLogoImage();
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final pageTheme = pw.ThemeData.withFont(base: fontRegular, bold: fontBold);
+
+    final primaryColor = PdfColor.fromHex('#003F87');
+    final surfaceContainerLow = PdfColor.fromHex('#F3F4F5');
+
+    final double totalNeto = subtotal - descuento;
+    final double saldoPendiente = totalNeto - totalPagado;
+    final fechaStr = DateTime.now().toString().split(' ')[0];
+
+    pdf.addPage(
+      pw.Page(
+        theme: pageTheme,
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 50,
+                          height: 50,
+                          margin: const pw.EdgeInsets.only(right: 12),
+                          child: pw.Image(logoImage),
+                        ),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                          pw.Text('The Clinical Sanctuary • Estado de Cuenta & Presupuesto (GTQ)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('MONEDA', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                      pw.Text('Quetzales (Q)', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 14),
+              pw.Container(height: 2, color: primaryColor),
+              pw.SizedBox(height: 14),
+
+              pw.Container(
+                padding: const pw.EdgeInsets.all(14),
+                decoration: pw.BoxDecoration(
+                  color: surfaceContainerLow,
+                  borderRadius: pw.BorderRadius.circular(12),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('PACIENTE', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text('${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Fecha de Emisión: $fechaStr', style: const pw.TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('SALDO PENDIENTE', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text('Q ${saldoPendiente.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 18),
+
+              pw.Text('DETALLE DE TRATAMIENTOS Y SERVICIOS:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+              pw.SizedBox(height: 8),
+
+              for (var item in items)
+                pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 6),
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(item['concepto'] ?? 'Tratamiento Odontológico', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Estado: ${item['estado'] ?? "Pendiente"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                        ],
+                      ),
+                      pw.Text('Q ${(item['precio'] ?? 0.0).toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    ],
+                  ),
+                ),
+
+              pw.SizedBox(height: 16),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: surfaceContainerLow,
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Subtotal:'), pw.Text('Q ${subtotal.toStringAsFixed(2)}')]),
+                    pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Descuento:'), pw.Text('Q ${descuento.toStringAsFixed(2)}')]),
+                    pw.Divider(),
+                    pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Total Pagado:'), pw.Text('Q ${totalPagado.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green800))]),
+                    pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [pw.Text('Saldo Pendiente:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)), pw.Text('Q ${saldoPendiente.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800))]),
+                  ],
+                ),
+              ),
+
+              pw.Spacer(),
+              pw.Divider(),
+              pw.Center(
+                child: pw.Text('Rizo Dental Sanctuary • Guatemala GTQ • Moneda Oficial Quetzales (Q)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'estado_cuenta_${paciente.nombre.replaceAll(' ', '_')}.pdf',
     );
   }
 }

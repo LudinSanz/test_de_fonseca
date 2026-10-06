@@ -258,9 +258,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
     buffer.writeln('\n• Motivo: $motivo');
     buffer.writeln('• Fecha y Hora: $fechaStr');
-    buffer.writeln('\n🤖 *Recordatorios Automáticos:*');
-    buffer.writeln('• Recibirás recordatorios automáticos 3 días antes, 1 día antes y el mero día de tu cita.');
-    buffer.writeln('\n_Si necesitas cambiar tu horario, responde a este mensaje indicando que no podrás asistir y el sistema alertará al doctor para reprogramarte._');
+    buffer.writeln('\n🤖 *BOT DE CLÍNICA RIZO DENTAL (+502 5981-6632):*');
+    buffer.writeln('¿Deseas gestionar tu cita? Responde directamente a este chat:');
+    buffer.writeln('1️⃣ Responde *1* o *"Sí"* para CONFIRMAR tu asistencia.');
+    buffer.writeln('2️⃣ Responde *2* o *"No puedo"* para SOLICITAR REPROGRAMACIÓN (Alertará al doctor).');
+    buffer.writeln('3️⃣ Responde *3* o *"Cancelar"* para CANCELAR la cita.');
 
     final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
     final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
