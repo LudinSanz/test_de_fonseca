@@ -18,20 +18,34 @@ class SupabaseService {
   // ==================== 1. PACIENTES ====================
 
   Future<List<Paciente>> obtenerPacientes() async {
+    final List<Map<String, dynamic>> localList = await LocalDbService.getPacientesMap();
     try {
       if (_supabase != null) {
         final response = await _supabase!.from('pacientes').select().order('nombre');
-        if (response is List && response.isNotEmpty) {
-          final listMaps = response.map((e) => Map<String, dynamic>.from(e)).toList();
-          await LocalDbService.savePacientesMap(listMaps);
-          return listMaps.map((p) => Paciente.fromMap(p, p['id'].toString())).toList();
+        if (response is List) {
+          final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
+          final Map<String, Map<String, dynamic>> mergedMap = {};
+          for (var p in remoteList) {
+            final id = p['id']?.toString() ?? '';
+            if (id.isNotEmpty) mergedMap[id] = p;
+          }
+          for (var p in localList) {
+            final id = p['id']?.toString() ?? '';
+            if (id.isNotEmpty) {
+              // Combine remote and local properties so local updates are kept
+              final existing = mergedMap[id] ?? {};
+              mergedMap[id] = {...existing, ...p};
+            }
+          }
+          final mergedList = mergedMap.values.toList();
+          await LocalDbService.savePacientesMap(mergedList);
+          return mergedList.map((p) => Paciente.fromMap(p, p['id'].toString())).toList();
         }
       }
     } catch (e) {
       debugPrint('Aviso Supabase obtenerPacientes (usando cache local): $e');
     }
 
-    final localList = await LocalDbService.getPacientesMap();
     return localList.map((p) => Paciente.fromMap(p, p['id'].toString())).toList();
   }
 
@@ -40,7 +54,9 @@ class SupabaseService {
       if (_supabase != null) {
         final data = await _supabase!.from('pacientes').select().eq('id', id).maybeSingle();
         if (data != null) {
-          return Paciente.fromMap(Map<String, dynamic>.from(data), data['id'].toString());
+          final remoteMap = Map<String, dynamic>.from(data);
+          await LocalDbService.upsertPacienteMap(remoteMap);
+          return Paciente.fromMap(remoteMap, remoteMap['id'].toString());
         }
       }
     } catch (e) {
@@ -107,6 +123,7 @@ class SupabaseService {
   // ==================== 2. EVALUACIONES ====================
 
   Future<List<Map<String, dynamic>>> obtenerEvaluaciones({String? pacienteId}) async {
+    final List<Map<String, dynamic>> localList = await LocalDbService.getEvaluacionesMap();
     try {
       if (_supabase != null) {
         var query = _supabase!.from('evaluaciones').select();
@@ -114,17 +131,32 @@ class SupabaseService {
           query = query.or('paciente_id.eq.$pacienteId,pacienteId.eq.$pacienteId');
         }
         final response = await query.order('created_at', ascending: false);
-        if (response is List && response.isNotEmpty) {
-          final listMaps = response.map((e) => Map<String, dynamic>.from(e)).toList();
-          await LocalDbService.saveList('db_evaluaciones_v2', listMaps);
-          return listMaps;
+        if (response is List) {
+          final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
+          final Map<String, Map<String, dynamic>> mergedMap = {};
+          for (var item in remoteList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) mergedMap[id] = item;
+          }
+          for (var item in localList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) {
+              final existing = mergedMap[id] ?? {};
+              mergedMap[id] = {...existing, ...item};
+            }
+          }
+          final mergedList = mergedMap.values.toList();
+          await LocalDbService.saveEvaluacionesMap(mergedList);
+          if (pacienteId != null && pacienteId.isNotEmpty) {
+            return mergedList.where((e) => e['paciente_id'] == pacienteId || e['pacienteId'] == pacienteId).toList();
+          }
+          return mergedList;
         }
       }
     } catch (e) {
       debugPrint('Aviso Supabase obtenerEvaluaciones (usando cache local): $e');
     }
 
-    final localList = await LocalDbService.getEvaluacionesMap();
     if (pacienteId != null && pacienteId.isNotEmpty) {
       return localList.where((e) => e['paciente_id'] == pacienteId || e['pacienteId'] == pacienteId).toList();
     }
@@ -149,7 +181,6 @@ class SupabaseService {
       final cleanMap = {
         'id': id,
         'paciente_id': evalMap['paciente_id'] ?? evalMap['pacienteId'] ?? '',
-        'pacienteId': evalMap['paciente_id'] ?? evalMap['pacienteId'] ?? '',
         'paciente_nombre': evalMap['paciente_nombre'] ?? evalMap['pacienteNombre'] ?? 'Paciente General',
         'fecha': evalMap['fecha']?.toString() ?? DateTime.now().toIso8601String(),
         'puntuacion': evalMap['puntuacion'] ?? evalMap['score'] ?? 0,
@@ -167,6 +198,7 @@ class SupabaseService {
   // ==================== 3. CITAS ====================
 
   Future<List<Map<String, dynamic>>> obtenerCitas({String? pacienteId}) async {
+    final List<Map<String, dynamic>> localList = await LocalDbService.getCitasMap();
     try {
       if (_supabase != null) {
         var query = _supabase!.from('citas').select();
@@ -174,17 +206,32 @@ class SupabaseService {
           query = query.eq('paciente_id', pacienteId);
         }
         final response = await query.order('created_at', ascending: false);
-        if (response is List && response.isNotEmpty) {
-          final listMaps = response.map((e) => Map<String, dynamic>.from(e)).toList();
-          await LocalDbService.saveList('db_citas_v2', listMaps);
-          return listMaps;
+        if (response is List) {
+          final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
+          final Map<String, Map<String, dynamic>> mergedMap = {};
+          for (var item in remoteList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) mergedMap[id] = item;
+          }
+          for (var item in localList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) {
+              final existing = mergedMap[id] ?? {};
+              mergedMap[id] = {...existing, ...item};
+            }
+          }
+          final mergedList = mergedMap.values.toList();
+          await LocalDbService.saveCitasMap(mergedList);
+          if (pacienteId != null && pacienteId.isNotEmpty) {
+            return mergedList.where((c) => c['paciente_id'] == pacienteId).toList();
+          }
+          return mergedList;
         }
       }
     } catch (e) {
       debugPrint('Aviso Supabase obtenerCitas (usando cache local): $e');
     }
 
-    final localList = await LocalDbService.getCitasMap();
     if (pacienteId != null && pacienteId.isNotEmpty) {
       return localList.where((c) => c['paciente_id'] == pacienteId).toList();
     }
@@ -219,20 +266,34 @@ class SupabaseService {
   // ==================== 4. INVENTARIO ====================
 
   Future<List<Map<String, dynamic>>> obtenerInventario() async {
+    final List<Map<String, dynamic>> localList = await LocalDbService.getInventarioMap();
     try {
       if (_supabase != null) {
         final response = await _supabase!.from('inventario').select().order('nombre', ascending: true);
-        if (response is List && response.isNotEmpty) {
-          final listMaps = response.map((e) => Map<String, dynamic>.from(e)).toList();
-          await LocalDbService.saveList('db_inventario_v2', listMaps);
-          return listMaps;
+        if (response is List) {
+          final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
+          final Map<String, Map<String, dynamic>> mergedMap = {};
+          for (var item in remoteList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) mergedMap[id] = item;
+          }
+          for (var item in localList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) {
+              final existing = mergedMap[id] ?? {};
+              mergedMap[id] = {...existing, ...item};
+            }
+          }
+          final mergedList = mergedMap.values.toList();
+          await LocalDbService.saveInventarioMap(mergedList);
+          return mergedList;
         }
       }
     } catch (e) {
       debugPrint('Aviso Supabase obtenerInventario (usando cache local): $e');
     }
 
-    return await LocalDbService.getInventarioMap();
+    return localList;
   }
 
   Future<void> guardarItemInventario(Map<String, dynamic> itemData) async {
@@ -263,6 +324,7 @@ class SupabaseService {
   // ==================== 5. RECETAS ====================
 
   Future<List<Map<String, dynamic>>> obtenerRecetas({String? pacienteId}) async {
+    final List<Map<String, dynamic>> localList = await LocalDbService.getRecetasMap();
     try {
       if (_supabase != null) {
         var query = _supabase!.from('recetas').select();
@@ -270,17 +332,32 @@ class SupabaseService {
           query = query.eq('paciente_id', pacienteId);
         }
         final response = await query.order('created_at', ascending: false);
-        if (response is List && response.isNotEmpty) {
-          final listMaps = response.map((e) => Map<String, dynamic>.from(e)).toList();
-          await LocalDbService.saveList('db_recetas_v2', listMaps);
-          return listMaps;
+        if (response is List) {
+          final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
+          final Map<String, Map<String, dynamic>> mergedMap = {};
+          for (var item in remoteList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) mergedMap[id] = item;
+          }
+          for (var item in localList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty) {
+              final existing = mergedMap[id] ?? {};
+              mergedMap[id] = {...existing, ...item};
+            }
+          }
+          final mergedList = mergedMap.values.toList();
+          await LocalDbService.saveRecetasMap(mergedList);
+          if (pacienteId != null && pacienteId.isNotEmpty) {
+            return mergedList.where((r) => r['paciente_id'] == pacienteId).toList();
+          }
+          return mergedList;
         }
       }
     } catch (e) {
       debugPrint('Aviso Supabase obtenerRecetas (usando cache local): $e');
     }
 
-    final localList = await LocalDbService.getRecetasMap();
     if (pacienteId != null && pacienteId.isNotEmpty) {
       return localList.where((r) => r['paciente_id'] == pacienteId).toList();
     }
@@ -396,3 +473,4 @@ class SupabaseService {
 
 // Alias para compatibilidad con código existente
 typedef FirestoreService = SupabaseService;
+
