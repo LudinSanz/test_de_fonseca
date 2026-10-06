@@ -207,13 +207,12 @@ class PdfGenerator {
   // -------------------------------------------------------------
   static Future<void> generarPdfCita({
     required Paciente paciente,
-    required String fechaCita,
-    required String horaCita,
-    required String servicio,
-    required String profesional,
+    required String fechaHora,
+    required String motivo,
     required String estado,
     required String notas,
     required Map<String, dynamic>? doctorInfo,
+    String? profesional,
   }) async {
     final pdf = pw.Document();
     final logoImage = await _loadLogoImage();
@@ -272,9 +271,9 @@ class PdfGenerator {
                     pw.Text('DETALLES DE LA CITA PROGRAMADA', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                     pw.SizedBox(height: 10),
                     pw.Text('Paciente: ${paciente.nombre} ${paciente.apellido}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('Servicio: $servicio', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text('Fecha y Hora: $fechaCita - $horaCita', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                    pw.Text('Profesional Asignado: $profesional', style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('Motivo / Servicio: $motivo', style: const pw.TextStyle(fontSize: 11)),
+                    pw.Text('Fecha y Hora: $fechaHora', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    pw.Text('Profesional Asignado: ${profesional ?? doctorInfo?['name'] ?? "Dr. Ludin Solis"}', style: const pw.TextStyle(fontSize: 11)),
                     pw.Text('Estado: $estado', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
                     if (notas.isNotEmpty) pw.Text('Notas: $notas', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
                   ],
