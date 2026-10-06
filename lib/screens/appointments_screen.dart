@@ -42,12 +42,40 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
-  void _abrirModalNuevaCita() {
+  void _abrirModalNuevaCita({Map<String, dynamic>? citaExistente}) {
     Paciente? pacienteSeleccionado = _pacientes.isNotEmpty ? _pacientes.first : null;
+    if (citaExistente != null) {
+      final pFound = _pacientes.firstWhere(
+        (p) => p.id == citaExistente['paciente_id'],
+        orElse: () => _pacientes.isNotEmpty ? _pacientes.first : Paciente(
+          id: citaExistente['paciente_id'] ?? 'id',
+          nombre: citaExistente['paciente_nombre'] ?? 'Paciente',
+          apellido: '',
+          email: '',
+          telefono: citaExistente['paciente_telefono'] ?? '',
+          fechaNacimiento: DateTime(1990, 1, 1),
+          genero: 'M',
+          direccion: '',
+        ),
+      );
+      pacienteSeleccionado = pFound;
+    }
+
     DateTime fechaCita = DateTime.now().add(const Duration(days: 1));
     TimeOfDay horaCita = const TimeOfDay(hour: 10, minute: 0);
-    final motivoController = TextEditingController(text: 'Evaluación y Diagnóstico ATM / Fonseca');
-    final notasController = TextEditingController();
+
+    if (citaExistente != null && citaExistente['fecha_hora'] != null) {
+      final dt = DateTime.tryParse(citaExistente['fecha_hora']) ?? DateTime.now();
+      fechaCita = dt;
+      horaCita = TimeOfDay(hour: dt.hour, minute: dt.minute);
+    }
+
+    final motivoController = TextEditingController(
+      text: citaExistente != null ? citaExistente['motivo'] : 'Evaluación y Diagnóstico ATM / Fonseca',
+    );
+    final notasController = TextEditingController(
+      text: citaExistente != null ? (citaExistente['notas'] ?? '') : '',
+    );
 
     showDialog(
       context: context,
@@ -55,7 +83,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: AppColors.surfaceContainerLowest,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Programar Cita Odontológica', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+          title: Text(
+            citaExistente == null ? 'Programar Cita Odontológica' : '🔄 Reprogramar Cita Odontológica',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -128,8 +159,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   horaCita.minute,
                 );
 
+                final String citaId = citaExistente != null
+                    ? citaExistente['id']
+                    : 'cita_${DateTime.now().millisecondsSinceEpoch}';
+
                 final citaData = {
-                  'id': 'cita_${DateTime.now().millisecondsSinceEpoch}',
+                  'id': citaId,
                   'paciente_id': pacienteSeleccionado!.id,
                   'paciente_nombre': '${pacienteSeleccionado!.nombre} ${pacienteSeleccionado!.apellido}',
                   'paciente_telefono': pacienteSeleccionado!.telefono,
@@ -139,6 +174,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   'motivo': motivoController.text.trim(),
                   'notas': notasController.text.trim(),
                   'estado': 'Programada',
+                  'requiere_reprogramacion': false,
+                  'recordatorio_3dias': true,
+                  'recordatorio_1dia': true,
+                  'recordatorio_hoy': true,
                 };
 
                 try {
@@ -147,8 +186,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   if (!mounted) return;
                   Navigator.pop(ctx);
                   _cargarDatos();
+                  _notificarWhatsAppAuto(citaData, esReprogramacion: citaExistente != null);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('¡Cita programada exitosamente!'), backgroundColor: AppColors.success),
+                    SnackBar(
+                      content: Text(citaExistente == null ? '¡Cita programada y notificación enviada!' : '¡Cita reprogramada exitosamente!'),
+                      backgroundColor: AppColors.success,
+                    ),
                   );
                 } catch (e) {
                   debugPrint('Error al guardar cita: $e');
@@ -159,7 +202,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Guardar Cita'),
+              child: Text(citaExistente == null ? 'Guardar Cita' : 'Confirmar Reprogramación'),
             ),
           ],
         ),
@@ -198,25 +241,53 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  void _notificarWhatsApp(Map<String, dynamic> cita) async {
+  void _notificarWhatsAppAuto(Map<String, dynamic> cita, {bool esReprogramacion = false}) async {
     final tel = cita['paciente_telefono'] ?? '';
     final nombre = cita['paciente_nombre'] ?? 'Paciente';
     final motivo = cita['motivo'] ?? 'Cita Odontológica';
     final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
     final fechaStr = '${dt.day}/${dt.month}/${dt.year} a las ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
 
-    final mensaje = 'Hola $nombre, te recordamos tu cita odontológica en Rizo Dental para $motivo el día $fechaStr. ¡Te esperamos!';
+    final buffer = StringBuffer();
+    if (esReprogramacion) {
+      buffer.writeln('🔄 *CITA REPROGRAMADA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('Hola $nombre, tu cita ha sido reprogramada exitosamente.');
+    } else {
+      buffer.writeln('📅 *CONFIRMACIÓN DE CITA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('Hola $nombre, tu cita odontológica fue agendada exitosamente.');
+    }
+    buffer.writeln('\n• Motivo: $motivo');
+    buffer.writeln('• Fecha y Hora: $fechaStr');
+    buffer.writeln('\n🤖 *Recordatorios Automáticos:*');
+    buffer.writeln('• Recibirás recordatorios automáticos 3 días antes, 1 día antes y el mero día de tu cita.');
+    buffer.writeln('\n_Si necesitas cambiar tu horario, responde a este mensaje indicando que no podrás asistir y el sistema alertará al doctor para reprogramarte._');
+
     final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
-    final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(mensaje)}');
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir WhatsApp para $cleanPhone'), backgroundColor: AppColors.error),
-      );
     }
+  }
+
+  void _simularRespuestaPacienteNoPuede(Map<String, dynamic> cita) async {
+    final citaModificada = Map<String, dynamic>.from(cita);
+    citaModificada['estado'] = 'Pendiente Reprogramación';
+    citaModificada['requiere_reprogramacion'] = true;
+    citaModificada['alerta_paciente'] = 'El paciente respondió por WhatsApp indicando que no podrá asistir.';
+
+    final supabaseService = SupabaseService();
+    await supabaseService.guardarCita(citaModificada);
+    _cargarDatos();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🚨 Alerta Bot: El paciente indicó que no podrá asistir. Cita marcada para reprogramar.'),
+        backgroundColor: AppColors.warning,
+        duration: Duration(seconds: 4),
+      ),
+    );
   }
 
   InputDecoration _inputDecoration(String label) {
@@ -267,7 +338,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   ),
                 ),
                 Text(
-                  'Gestión de Citas Odontológicas',
+                  'Gestión de Citas Odontológicas & Bot WhatsApp',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -280,7 +351,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: AppColors.primary, size: 28),
-            onPressed: _abrirModalNuevaCita,
+            onPressed: () => _abrirModalNuevaCita(),
           ),
         ],
       ),
@@ -303,7 +374,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                         ElevatedButton.icon(
                           icon: const Icon(Icons.add, color: Colors.white),
                           label: const Text('Programar Primera Cita'),
-                          onPressed: _abrirModalNuevaCita,
+                          onPressed: () => _abrirModalNuevaCita(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -319,25 +390,63 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       final cita = _citas[index];
                       final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
                       final fechaHoraStr = '${dt.day}/${dt.month}/${dt.year} - ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+                      final bool requiereReprogramacion = cita['requiere_reprogramacion'] == true || cita['estado'] == 'Pendiente Reprogramación';
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 14),
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
+                          color: requiereReprogramacion
+                              ? AppColors.warning.withOpacity(0.08)
+                              : AppColors.surfaceContainerLowest,
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: requiereReprogramacion ? AppColors.warning : AppColors.ghostOutline,
+                            width: requiereReprogramacion ? 2.0 : 1.0,
+                          ),
                           boxShadow: const [
                             BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
                           ],
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (requiereReprogramacion) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.warning.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        cita['alerta_paciente'] ?? '🚨 El paciente indicó por WhatsApp que no podrá asistir. Presione Reprogramar.',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.onSurface),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
                             Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.12), shape: BoxShape.circle),
-                                  child: const Icon(Icons.person, color: AppColors.primary),
+                                  decoration: BoxDecoration(
+                                    color: requiereReprogramacion ? AppColors.warning.withOpacity(0.18) : AppColors.primary.withOpacity(0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    requiereReprogramacion ? Icons.event_busy : Icons.person,
+                                    color: requiereReprogramacion ? AppColors.warning : AppColors.primary,
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
@@ -360,32 +469,105 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 12),
+
+                            // Scheduled Automated Reminders Status Line
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.check_circle_outline, size: 14, color: AppColors.success),
+                                      SizedBox(width: 4),
+                                      Text('Rec. 3 Días (Bot)', style: TextStyle(fontSize: 10, color: AppColors.textLight)),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.check_circle_outline, size: 14, color: AppColors.success),
+                                      SizedBox(width: 4),
+                                      Text('Rec. 1 Día (Bot)', style: TextStyle(fontSize: 10, color: AppColors.textLight)),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.check_circle_outline, size: 14, color: AppColors.success),
+                                      SizedBox(width: 4),
+                                      Text('Rec. Hoy (Bot)', style: TextStyle(fontSize: 10, color: AppColors.textLight)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
                             Row(
                               children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.picture_as_pdf, size: 18, color: AppColors.primary),
-                                    label: const Text('Exportar PDF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                                    onPressed: () => _exportarPdfCita(cita),
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: AppColors.ghostOutline, width: 1),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                if (requiereReprogramacion) ...[
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(Icons.edit_calendar, size: 18, color: Colors.white),
+                                      label: const Text('REPROGRAMAR CITA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      onPressed: () => _abrirModalNuevaCita(citaExistente: cita),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.send_to_mobile, size: 18, color: Colors.white),
-                                    label: const Text('WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-                                    onPressed: () => _notificarWhatsApp(cita),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.success,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ] else ...[
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.picture_as_pdf, size: 18, color: AppColors.primary),
+                                      label: const Text('Exportar PDF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                      onPressed: () => _exportarPdfCita(cita),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: AppColors.ghostOutline, width: 1),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(Icons.send_to_mobile, size: 18, color: Colors.white),
+                                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      onPressed: () => _notificarWhatsAppAuto(cita),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_vert, color: AppColors.textLight),
+                                    onSelected: (val) {
+                                      if (val == 'simular_no_puede') {
+                                        _simularRespuestaPacienteNoPuede(cita);
+                                      } else if (val == 'reprogramar') {
+                                        _abrirModalNuevaCita(citaExistente: cita);
+                                      }
+                                    },
+                                    itemBuilder: (ctx) => [
+                                      const PopupMenuItem(
+                                        value: 'reprogramar',
+                                        child: Text('Reprogramar Fecha/Hora'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'simular_no_puede',
+                                        child: Text('Simular Paciente Indica "No Puedo"'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ],
