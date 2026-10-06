@@ -115,14 +115,48 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         break;
       case 1:
-        _showEvaluationOptions();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+        );
         break;
       case 2:
-        _showReports();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()),
+        );
         break;
       case 3:
-        _showSettings();
+        _abrirChatWhatsAppClinica();
         break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
+        break;
+    }
+  }
+
+  void _abrirChatWhatsAppClinica() async {
+    try {
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
+
+      final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
+      final String tel = data?['telefono_whatsapp_clinica'] ?? data?['telefono'] ?? '+502 5555 8888';
+      final cleanTel = tel.replaceAll(RegExp(r'[^\d+]'), '');
+
+      final uri = Uri.parse('https://wa.me/$cleanTel?text=Hola%20Rizo%20Dental%20Sanctuary%2C%20deseo%20realizar%20una%20consulta.');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error al abrir WhatsApp: $e');
     }
   }
 
@@ -950,19 +984,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Inicio',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.assessment_outlined),
-                activeIcon: Icon(Icons.assessment),
-                label: 'Evaluar',
+                icon: Icon(Icons.calendar_month_outlined),
+                activeIcon: Icon(Icons.calendar_month),
+                label: 'Citas',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.bar_chart_outlined),
-                activeIcon: Icon(Icons.bar_chart),
-                label: 'Reportes',
+                icon: Icon(Icons.medical_services_outlined),
+                activeIcon: Icon(Icons.medical_services),
+                label: 'Tratamientos',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.settings_outlined),
-                activeIcon: Icon(Icons.settings),
-                label: 'Config',
+                icon: Icon(Icons.chat_outlined),
+                activeIcon: Icon(Icons.chat),
+                label: 'Mensajes',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outlined),
+                activeIcon: Icon(Icons.person),
+                label: 'Perfil',
               ),
             ],
           ),
