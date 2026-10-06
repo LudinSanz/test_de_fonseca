@@ -15,7 +15,166 @@ class SupabaseService {
     }
   }
 
-  // ==================== BACKGROUND SYNC ====================
+  // ==================== HELPER UPSERTS ====================
+
+  Future<void> _upsertPacienteMap(Map<String, dynamic> pacienteMap) async {
+    if (_supabase == null) return;
+    final String id = pacienteMap['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    final String fnStr = (pacienteMap['fecha_nacimiento'] ?? pacienteMap['fechaNacimiento'] ?? '1990-01-01').toString().split('T')[0];
+
+    try {
+      await _supabase!.from('pacientes').upsert({
+        'id': id,
+        'nombre': pacienteMap['nombre'] ?? '',
+        'apellido': pacienteMap['apellido'] ?? '',
+        'email': pacienteMap['email'] ?? '',
+        'telefono': pacienteMap['telefono'] ?? '',
+        'fecha_nacimiento': fnStr,
+        'genero': pacienteMap['genero'] ?? '',
+        'direccion': pacienteMap['direccion'] ?? '',
+      });
+    } catch (e) {
+      try {
+        await _supabase!.from('pacientes').upsert({
+          'id': id,
+          'nombre': pacienteMap['nombre'] ?? '',
+          'apellido': pacienteMap['apellido'] ?? '',
+          'email': pacienteMap['email'] ?? '',
+          'telefono': pacienteMap['telefono'] ?? '',
+          'genero': pacienteMap['genero'] ?? '',
+          'direccion': pacienteMap['direccion'] ?? '',
+        });
+      } catch (e2) {
+        debugPrint('Error _upsertPacienteMap: $e2');
+      }
+    }
+  }
+
+  Future<void> _upsertCitaMap(Map<String, dynamic> citaData) async {
+    if (_supabase == null) return;
+    final String id = citaData['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    final pacienteId = citaData['paciente_id'] ?? citaData['pacienteId'] ?? '';
+    final pacienteNombre = citaData['paciente_nombre'] ?? citaData['pacienteNombre'] ?? '';
+    final pacienteTel = citaData['paciente_telefono'] ?? citaData['pacienteTelefono'] ?? '';
+    final fechaHora = citaData['fecha_hora'] ?? citaData['fechaHora'] ?? DateTime.now().toIso8601String();
+
+    try {
+      await _supabase!.from('citas').upsert({
+        'id': id,
+        'paciente_id': pacienteId,
+        'paciente_nombre': pacienteNombre,
+        'paciente_telefono': pacienteTel,
+        'fecha_hora': fechaHora,
+        'fecha': citaData['fecha'] ?? '',
+        'hora': citaData['hora'] ?? '',
+        'motivo': citaData['motivo'] ?? '',
+        'notas': citaData['notas'] ?? '',
+        'estado': citaData['estado'] ?? 'Programada',
+      });
+    } catch (e) {
+      try {
+        await _supabase!.from('citas').upsert({
+          'id': id,
+          'paciente_id': pacienteId,
+          'fecha_hora': fechaHora,
+          'motivo': citaData['motivo'] ?? '',
+          'estado': citaData['estado'] ?? 'Programada',
+        });
+      } catch (e2) {
+        debugPrint('Error _upsertCitaMap: $e2');
+      }
+    }
+  }
+
+  Future<void> _upsertEvaluacionMap(Map<String, dynamic> evalMap) async {
+    if (_supabase == null) return;
+    final String id = evalMap['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    final pacienteId = evalMap['paciente_id'] ?? evalMap['pacienteId'] ?? '';
+    final pacienteNombre = evalMap['paciente_nombre'] ?? evalMap['pacienteNombre'] ?? '';
+
+    try {
+      await _supabase!.from('evaluaciones').upsert({
+        'id': id,
+        'paciente_id': pacienteId,
+        'paciente_nombre': pacienteNombre,
+        'fecha': evalMap['fecha']?.toString() ?? DateTime.now().toIso8601String(),
+        'puntuacion': evalMap['puntuacion'] ?? evalMap['score'] ?? 0,
+        'diagnostico': evalMap['diagnostico'] ?? evalMap['diagnosis'] ?? '',
+        'respuestas': evalMap['respuestas'] ?? evalMap['datos'] ?? {},
+      });
+    } catch (e) {
+      try {
+        await _supabase!.from('evaluaciones').upsert({
+          'id': id,
+          'paciente_id': pacienteId,
+          'puntuacion': evalMap['puntuacion'] ?? evalMap['score'] ?? 0,
+          'diagnostico': evalMap['diagnostico'] ?? evalMap['diagnosis'] ?? '',
+        });
+      } catch (e2) {
+        debugPrint('Error _upsertEvaluacionMap: $e2');
+      }
+    }
+  }
+
+  Future<void> _upsertRecetaMap(Map<String, dynamic> recetaData) async {
+    if (_supabase == null) return;
+    final String id = recetaData['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    final pacienteId = recetaData['paciente_id'] ?? recetaData['pacienteId'] ?? '';
+    final pacienteNombre = recetaData['paciente_nombre'] ?? recetaData['pacienteNombre'] ?? '';
+    final doctorNombre = recetaData['doctor_nombre'] ?? recetaData['doctorNombre'] ?? '';
+
+    try {
+      await _supabase!.from('recetas').upsert({
+        'id': id,
+        'paciente_id': pacienteId,
+        'paciente_nombre': pacienteNombre,
+        'doctor_nombre': doctorNombre,
+        'fecha': recetaData['fecha'] ?? DateTime.now().toIso8601String().split('T')[0],
+        'medicamentos': recetaData['medicamentos'] ?? '',
+        'indicaciones': recetaData['indicaciones'] ?? '',
+        'indicaciones_generales': recetaData['indicaciones_generales'] ?? recetaData['indicacionesGenerales'] ?? '',
+      });
+    } catch (e) {
+      try {
+        await _supabase!.from('recetas').upsert({
+          'id': id,
+          'paciente_id': pacienteId,
+          'medicamentos': recetaData['medicamentos'] ?? '',
+          'indicaciones': recetaData['indicaciones'] ?? '',
+        });
+      } catch (e2) {
+        debugPrint('Error _upsertRecetaMap: $e2');
+      }
+    }
+  }
+
+  Future<void> _upsertInventarioMap(Map<String, dynamic> itemData) async {
+    if (_supabase == null) return;
+    final String id = itemData['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+
+    try {
+      await _supabase!.from('inventario').upsert({
+        'id': id,
+        'nombre': itemData['nombre'] ?? '',
+        'categoria': itemData['categoria'] ?? '',
+        'cantidad': itemData['cantidad'] ?? 0,
+        'unidad': itemData['unidad'] ?? '',
+        'stock_minimo': itemData['stock_minimo'] ?? itemData['stockMinimo'] ?? 0,
+        'costo_unitario': itemData['costo_unitario'] ?? itemData['costoUnitario'] ?? 0.0,
+      });
+    } catch (e) {
+      debugPrint('Error _upsertInventarioMap: $e');
+    }
+  }
 
   Future<void> syncAllToSupabase() async {
     if (_supabase == null) return;
@@ -45,214 +204,6 @@ class SupabaseService {
     }
   }
 
-  // ==================== HELPER UPSERTS CON FALLBACKS ====================
-
-  Future<void> _upsertPacienteMap(Map<String, dynamic> pacienteMap) async {
-    if (_supabase == null) return;
-    final String id = pacienteMap['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-
-    final String fnStr = (pacienteMap['fecha_nacimiento'] ?? pacienteMap['fechaNacimiento'] ?? '1990-01-01').toString();
-
-    // Intentar variante 1: Completa con snake_case y camelCase
-    try {
-      await _supabase!.from('pacientes').upsert({
-        'id': id,
-        'nombre': pacienteMap['nombre'] ?? '',
-        'apellido': pacienteMap['apellido'] ?? '',
-        'email': pacienteMap['email'] ?? '',
-        'telefono': pacienteMap['telefono'] ?? '',
-        'fecha_nacimiento': fnStr.split('T')[0],
-        'fechaNacimiento': fnStr.split('T')[0],
-        'genero': pacienteMap['genero'] ?? '',
-        'direccion': pacienteMap['direccion'] ?? '',
-      });
-      return;
-    } catch (_) {}
-
-    // Intentar variante 2: Solo snake_case
-    try {
-      await _supabase!.from('pacientes').upsert({
-        'id': id,
-        'nombre': pacienteMap['nombre'] ?? '',
-        'apellido': pacienteMap['apellido'] ?? '',
-        'email': pacienteMap['email'] ?? '',
-        'telefono': pacienteMap['telefono'] ?? '',
-        'fecha_nacimiento': fnStr.split('T')[0],
-        'genero': pacienteMap['genero'] ?? '',
-        'direccion': pacienteMap['direccion'] ?? '',
-      });
-      return;
-    } catch (_) {}
-
-    // Intentar variante 3: Mínima
-    try {
-      await _supabase!.from('pacientes').upsert({
-        'id': id,
-        'nombre': pacienteMap['nombre'] ?? '',
-        'apellido': pacienteMap['apellido'] ?? '',
-        'email': pacienteMap['email'] ?? '',
-        'telefono': pacienteMap['telefono'] ?? '',
-        'genero': pacienteMap['genero'] ?? '',
-        'direccion': pacienteMap['direccion'] ?? '',
-      });
-    } catch (e) {
-      debugPrint('Error _upsertPacienteMap: $e');
-    }
-  }
-
-  Future<void> _upsertCitaMap(Map<String, dynamic> citaData) async {
-    if (_supabase == null) return;
-    final String id = citaData['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-
-    final pacienteId = citaData['paciente_id'] ?? citaData['pacienteId'] ?? '';
-    final pacienteNombre = citaData['paciente_nombre'] ?? citaData['pacienteNombre'] ?? '';
-    final pacienteTel = citaData['paciente_telefono'] ?? citaData['pacienteTelefono'] ?? '';
-    final fechaHora = citaData['fecha_hora'] ?? citaData['fechaHora'] ?? DateTime.now().toIso8601String();
-
-    try {
-      await _supabase!.from('citas').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'pacienteId': pacienteId,
-        'paciente_nombre': pacienteNombre,
-        'pacienteNombre': pacienteNombre,
-        'paciente_telefono': pacienteTel,
-        'pacienteTelefono': pacienteTel,
-        'fecha_hora': fechaHora,
-        'fechaHora': fechaHora,
-        'fecha': citaData['fecha'] ?? '',
-        'hora': citaData['hora'] ?? '',
-        'motivo': citaData['motivo'] ?? '',
-        'notas': citaData['notas'] ?? '',
-        'estado': citaData['estado'] ?? 'Programada',
-      });
-      return;
-    } catch (_) {}
-
-    try {
-      await _supabase!.from('citas').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'paciente_nombre': pacienteNombre,
-        'paciente_telefono': pacienteTel,
-        'fecha_hora': fechaHora,
-        'fecha': citaData['fecha'] ?? '',
-        'hora': citaData['hora'] ?? '',
-        'motivo': citaData['motivo'] ?? '',
-        'notas': citaData['notas'] ?? '',
-        'estado': citaData['estado'] ?? 'Programada',
-      });
-      return;
-    } catch (_) {}
-
-    try {
-      await _supabase!.from('citas').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'fecha_hora': fechaHora,
-        'motivo': citaData['motivo'] ?? '',
-        'estado': citaData['estado'] ?? 'Programada',
-      });
-    } catch (e) {
-      debugPrint('Error _upsertCitaMap: $e');
-    }
-  }
-
-  Future<void> _upsertEvaluacionMap(Map<String, dynamic> evalMap) async {
-    if (_supabase == null) return;
-    final String id = evalMap['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-
-    final pacienteId = evalMap['paciente_id'] ?? evalMap['pacienteId'] ?? '';
-    final pacienteNombre = evalMap['paciente_nombre'] ?? evalMap['pacienteNombre'] ?? '';
-
-    try {
-      await _supabase!.from('evaluaciones').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'pacienteId': pacienteId,
-        'paciente_nombre': pacienteNombre,
-        'pacienteNombre': pacienteNombre,
-        'fecha': evalMap['fecha']?.toString() ?? DateTime.now().toIso8601String(),
-        'puntuacion': evalMap['puntuacion'] ?? evalMap['score'] ?? 0,
-        'diagnostico': evalMap['diagnostico'] ?? evalMap['diagnosis'] ?? '',
-        'respuestas': evalMap['respuestas'] ?? evalMap['datos'] ?? {},
-      });
-      return;
-    } catch (_) {}
-
-    try {
-      await _supabase!.from('evaluaciones').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'puntuacion': evalMap['puntuacion'] ?? evalMap['score'] ?? 0,
-        'diagnostico': evalMap['diagnostico'] ?? evalMap['diagnosis'] ?? '',
-      });
-    } catch (e) {
-      debugPrint('Error _upsertEvaluacionMap: $e');
-    }
-  }
-
-  Future<void> _upsertRecetaMap(Map<String, dynamic> recetaData) async {
-    if (_supabase == null) return;
-    final String id = recetaData['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-
-    final pacienteId = recetaData['paciente_id'] ?? recetaData['pacienteId'] ?? '';
-    final pacienteNombre = recetaData['paciente_nombre'] ?? recetaData['pacienteNombre'] ?? '';
-    final doctorNombre = recetaData['doctor_nombre'] ?? recetaData['doctorNombre'] ?? '';
-
-    try {
-      await _supabase!.from('recetas').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'pacienteId': pacienteId,
-        'paciente_nombre': pacienteNombre,
-        'pacienteNombre': pacienteNombre,
-        'doctor_nombre': doctorNombre,
-        'doctorNombre': doctorNombre,
-        'fecha': recetaData['fecha'] ?? DateTime.now().toIso8601String().split('T')[0],
-        'medicamentos': recetaData['medicamentos'] ?? '',
-        'indicaciones': recetaData['indicaciones'] ?? '',
-        'indicaciones_generales': recetaData['indicaciones_generales'] ?? recetaData['indicacionesGenerales'] ?? '',
-      });
-      return;
-    } catch (_) {}
-
-    try {
-      await _supabase!.from('recetas').upsert({
-        'id': id,
-        'paciente_id': pacienteId,
-        'medicamentos': recetaData['medicamentos'] ?? '',
-        'indicaciones': recetaData['indicaciones'] ?? '',
-      });
-    } catch (e) {
-      debugPrint('Error _upsertRecetaMap: $e');
-    }
-  }
-
-  Future<void> _upsertInventarioMap(Map<String, dynamic> itemData) async {
-    if (_supabase == null) return;
-    final String id = itemData['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-
-    try {
-      await _supabase!.from('inventario').upsert({
-        'id': id,
-        'nombre': itemData['nombre'] ?? '',
-        'categoria': itemData['categoria'] ?? '',
-        'cantidad': itemData['cantidad'] ?? 0,
-        'unidad': itemData['unidad'] ?? '',
-        'stock_minimo': itemData['stock_minimo'] ?? itemData['stockMinimo'] ?? 0,
-        'costo_unitario': itemData['costo_unitario'] ?? itemData['costoUnitario'] ?? 0.0,
-      });
-    } catch (e) {
-      debugPrint('Error _upsertInventarioMap: $e');
-    }
-  }
-
   // ==================== 1. PACIENTES ====================
 
   Future<List<Paciente>> obtenerPacientes() async {
@@ -264,13 +215,11 @@ class SupabaseService {
           final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
           final Map<String, Map<String, dynamic>> mergedMap = {};
 
-          // Priorizar remoto primero
           for (var p in remoteList) {
             final id = p['id']?.toString() ?? '';
             if (id.isNotEmpty) mergedMap[id] = p;
           }
 
-          // Combinar lo que esté local pero no en remoto
           for (var p in localList) {
             final id = p['id']?.toString() ?? '';
             if (id.isNotEmpty) {
@@ -281,9 +230,7 @@ class SupabaseService {
 
           final mergedList = mergedMap.values.toList();
           await LocalDbService.savePacientesMap(mergedList);
-
-          // Sincronizar en segundo plano lo local a la nube
-          syncAllToSupabase();
+          await syncAllToSupabase();
 
           return mergedList.map((p) => Paciente.fromMap(p, p['id'].toString())).toList();
         }
@@ -324,7 +271,7 @@ class SupabaseService {
     final Map<String, dynamic> pacienteMap = paciente.toMap();
     await LocalDbService.upsertPacienteMap(pacienteMap);
     await _upsertPacienteMap(pacienteMap);
-    syncAllToSupabase();
+    await syncAllToSupabase();
   }
 
   Future<void> eliminarPaciente(String id) async {
@@ -344,11 +291,7 @@ class SupabaseService {
     final List<Map<String, dynamic>> localList = await LocalDbService.getEvaluacionesMap();
     try {
       if (_supabase != null) {
-        var query = _supabase!.from('evaluaciones').select();
-        if (pacienteId != null && pacienteId.isNotEmpty) {
-          query = query.or('paciente_id.eq.$pacienteId,pacienteId.eq.$pacienteId');
-        }
-        final response = await query;
+        final response = await _supabase!.from('evaluaciones').select();
         if (response is List) {
           final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
           final Map<String, Map<String, dynamic>> mergedMap = {};
@@ -365,7 +308,7 @@ class SupabaseService {
           }
           final mergedList = mergedMap.values.toList();
           await LocalDbService.saveEvaluacionesMap(mergedList);
-          syncAllToSupabase();
+          await syncAllToSupabase();
 
           if (pacienteId != null && pacienteId.isNotEmpty) {
             return mergedList.where((e) => e['paciente_id'] == pacienteId || e['pacienteId'] == pacienteId).toList();
@@ -397,7 +340,7 @@ class SupabaseService {
     evalMap['id'] = id;
     await LocalDbService.upsertEvaluacionMap(evalMap);
     await _upsertEvaluacionMap(evalMap);
-    syncAllToSupabase();
+    await syncAllToSupabase();
   }
 
   // ==================== 3. CITAS ====================
@@ -406,11 +349,7 @@ class SupabaseService {
     final List<Map<String, dynamic>> localList = await LocalDbService.getCitasMap();
     try {
       if (_supabase != null) {
-        var query = _supabase!.from('citas').select();
-        if (pacienteId != null && pacienteId.isNotEmpty) {
-          query = query.eq('paciente_id', pacienteId);
-        }
-        final response = await query;
+        final response = await _supabase!.from('citas').select();
         if (response is List) {
           final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
           final Map<String, Map<String, dynamic>> mergedMap = {};
@@ -427,7 +366,7 @@ class SupabaseService {
           }
           final mergedList = mergedMap.values.toList();
           await LocalDbService.saveCitasMap(mergedList);
-          syncAllToSupabase();
+          await syncAllToSupabase();
 
           if (pacienteId != null && pacienteId.isNotEmpty) {
             return mergedList.where((c) => c['paciente_id'] == pacienteId || c['pacienteId'] == pacienteId).toList();
@@ -450,7 +389,7 @@ class SupabaseService {
     citaData['id'] = id;
     await LocalDbService.upsertCitaMap(citaData);
     await _upsertCitaMap(citaData);
-    syncAllToSupabase();
+    await syncAllToSupabase();
   }
 
   Future<void> eliminarCita(String id) async {
@@ -487,7 +426,7 @@ class SupabaseService {
           }
           final mergedList = mergedMap.values.toList();
           await LocalDbService.saveInventarioMap(mergedList);
-          syncAllToSupabase();
+          await syncAllToSupabase();
           return mergedList;
         }
       }
@@ -503,7 +442,7 @@ class SupabaseService {
     itemData['id'] = id;
     await LocalDbService.upsertInventarioMap(itemData);
     await _upsertInventarioMap(itemData);
-    syncAllToSupabase();
+    await syncAllToSupabase();
   }
 
   Future<void> eliminarItemInventario(String id) async {
@@ -523,11 +462,7 @@ class SupabaseService {
     final List<Map<String, dynamic>> localList = await LocalDbService.getRecetasMap();
     try {
       if (_supabase != null) {
-        var query = _supabase!.from('recetas').select();
-        if (pacienteId != null && pacienteId.isNotEmpty) {
-          query = query.eq('paciente_id', pacienteId);
-        }
-        final response = await query;
+        final response = await _supabase!.from('recetas').select();
         if (response is List) {
           final remoteList = response.map((e) => Map<String, dynamic>.from(e)).toList();
           final Map<String, Map<String, dynamic>> mergedMap = {};
@@ -544,7 +479,7 @@ class SupabaseService {
           }
           final mergedList = mergedMap.values.toList();
           await LocalDbService.saveRecetasMap(mergedList);
-          syncAllToSupabase();
+          await syncAllToSupabase();
 
           if (pacienteId != null && pacienteId.isNotEmpty) {
             return mergedList.where((r) => r['paciente_id'] == pacienteId || r['pacienteId'] == pacienteId).toList();
@@ -567,7 +502,7 @@ class SupabaseService {
     recetaData['id'] = id;
     await LocalDbService.upsertRecetaMap(recetaData);
     await _upsertRecetaMap(recetaData);
-    syncAllToSupabase();
+    await syncAllToSupabase();
   }
 
   // ==================== 6. PERFIL DOCTOR ====================
