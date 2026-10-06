@@ -18,8 +18,6 @@ dependencies:
   google_sign_in: 6.2.1
   provider: ^6.1.5+1
   url_launcher: ^6.3.0
-  dragon_charts_flutter: ^0.1.0
-  graphify: ^1.2.1
   shared_preferences: ^2.2.2
 
 dev_dependencies:
