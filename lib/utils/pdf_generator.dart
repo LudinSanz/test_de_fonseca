@@ -18,16 +18,16 @@ class PdfGenerator {
   }
 
   // Convierte los puntos dibujados en la pantalla a una imagen PNG para el PDF
-  static Future<Uint8List?> signaturePointsToPngBytes(List<Offset?> points, {double width = 300, double height = 120}) async {
+  static Future<Uint8List?> signaturePointsToPngBytes(List<ui.Offset?> points, {double width = 300, double height = 120}) async {
     final validPoints = points.where((p) => p != null).toList();
     if (validPoints.isEmpty) return null;
 
     try {
       final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
-      final paint = Paint()
-        ..color = const Color(0xFF003F87)
-        ..strokeCap = StrokeCap.round
+      final canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, width, height));
+      final paint = ui.Paint()
+        ..color = const ui.Color(0xFF003F87)
+        ..strokeCap = ui.StrokeCap.round
         ..strokeWidth = 3.5;
 
       for (int i = 0; i < points.length - 1; i++) {
