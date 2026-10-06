@@ -17,6 +17,7 @@ import 'patient_directory_screen.dart';
 import 'treatments_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
+import '../services/supabase_service.dart';
 import '../constants/colors.dart';
 
 class HomeScreen extends StatefulWidget {
