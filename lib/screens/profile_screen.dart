@@ -19,6 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
   final TextEditingController _colegiadoController = TextEditingController(text: 'COL-98421');
   final TextEditingController _telefonoController = TextEditingController(text: '+502 5555 9999');
+  final TextEditingController _whatsappClinicaController = TextEditingController(text: '+502 5555 8888');
   final TextEditingController _emailController = TextEditingController(text: 'doctor@clinic.gt');
   final TextEditingController _direccionController = TextEditingController(text: 'Edificio Sixtino II, Nivel 7, Oficina 702, Zona 10, Guatemala');
 
@@ -36,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _especialidadController.dispose();
     _colegiadoController.dispose();
     _telefonoController.dispose();
+    _whatsappClinicaController.dispose();
     _emailController.dispose();
     _direccionController.dispose();
     super.dispose();
@@ -65,6 +67,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
         if (data['telefono'] != null && data['telefono'].toString().isNotEmpty) {
           _telefonoController.text = data['telefono'];
+        }
+        if (data['telefono_whatsapp_clinica'] != null && data['telefono_whatsapp_clinica'].toString().isNotEmpty) {
+          _whatsappClinicaController.text = data['telefono_whatsapp_clinica'];
+        } else if (data['telefono'] != null && data['telefono'].toString().isNotEmpty) {
+          _whatsappClinicaController.text = data['telefono'];
         }
         if (data['email'] != null && data['email'].toString().isNotEmpty) {
           _emailController.text = data['email'];
@@ -97,6 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'colegiado': _colegiadoController.text.trim(),
         'especialidad': _especialidadController.text.trim(),
         'telefono': _telefonoController.text.trim(),
+        'telefono_whatsapp_clinica': _whatsappClinicaController.text.trim(),
         'direccion_clinica': _direccionController.text.trim(),
         'firma_digital': '${_nombreController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
       };
@@ -106,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('¡Perfil profesional guardado exitosamente!'),
+            content: const Text('¡Perfil profesional y WhatsApp de clínica guardados exitosamente!'),
             backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             behavior: SnackBarBehavior.floating,
@@ -176,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 Text(
-                  'Perfil Profesional del Doctor',
+                  'Perfil Profesional & Bot WhatsApp de la Clínica',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -273,12 +281,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Información de Membrete Oficial',
+                            'Información de Membrete Oficial & WhatsApp',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'Esta información se utilizará para nutrir los PDF de recetas, informes de Fonseca y constancias médicas.',
+                            'Esta información nutre los PDF de recetas, informes de Fonseca y el Bot de WhatsApp de la Clínica.',
                             style: TextStyle(fontSize: 12, color: AppColors.textLight),
                           ),
                           const SizedBox(height: 20),
@@ -311,10 +319,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: TextFormField(
                                   controller: _telefonoController,
                                   style: const TextStyle(color: AppColors.onSurface),
-                                  decoration: _inputDecoration('Teléfono / WhatsApp', Icons.phone_outlined),
+                                  decoration: _inputDecoration('Teléfono Personal', Icons.phone_outlined),
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          TextFormField(
+                            controller: _whatsappClinicaController,
+                            style: const TextStyle(color: AppColors.onSurface),
+                            decoration: _inputDecoration('Número de WhatsApp Bot de la Clínica (WhatsApp Business)', Icons.chat),
                           ),
                           const SizedBox(height: 14),
 
@@ -355,15 +370,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Probar Canal de WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface)),
-                                Text('Número actual: ${_telefonoController.text}', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                                const Text('Probar WhatsApp de la Clínica', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface)),
+                                Text('WhatsApp Bot: ${_whatsappClinicaController.text}', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
                               ],
                             ),
                           ),
                           TextButton(
                             onPressed: () async {
-                              final tel = _telefonoController.text.replaceAll(RegExp(r'[^\d+]'), '');
-                              final uri = Uri.parse('https://wa.me/$tel?text=Prueba%20de%20conexion%20Rizo%20Dental');
+                              final tel = _whatsappClinicaController.text.replaceAll(RegExp(r'[^\d+]'), '');
+                              final uri = Uri.parse('https://wa.me/$tel?text=Prueba%20de%20conexion%20Bot%20Rizo%20Dental');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }

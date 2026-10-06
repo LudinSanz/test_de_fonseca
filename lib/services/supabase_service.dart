@@ -404,10 +404,19 @@ class SupabaseService {
   }
 
   Future<void> guardarPerfilDoctor(Map<String, dynamic> doctorData) async {
-    await LocalDbService.saveDoctorProfile(doctorData);
+    final String emailOrId = doctorData['email'] ?? doctorData['id'] ?? '';
+    Map<String, dynamic> mergedData = doctorData;
+    if (emailOrId.isNotEmpty) {
+      final existing = await LocalDbService.getDoctorProfile(emailOrId);
+      if (existing != null && existing.isNotEmpty) {
+        mergedData = {...existing, ...doctorData};
+      }
+    }
+
+    await LocalDbService.saveDoctorProfile(mergedData);
     if (_supabase != null) {
       try {
-        await _supabase!.from('users').upsert(doctorData);
+        await _supabase!.from('users').upsert(mergedData);
       } catch (e) {
         debugPrint('Error en Supabase guardarPerfilDoctor, guardado localmente: $e');
       }
