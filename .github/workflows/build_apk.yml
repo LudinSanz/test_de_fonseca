@@ -11,16 +11,15 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -30,27 +29,13 @@ jobs:
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          cache: false
-
-      - name: Setup Android Keystore
-        run: |
-          mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          cache: true
 
       - name: Get Dependencies
-        run: |
-          export FLUTTER_ROOT=$FLUTTER_HOME
-          flutter pub get
+        run: flutter pub get
 
-      - name: Build Android APK
-        run: |
-          export FLUTTER_ROOT=$FLUTTER_HOME
-          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug --no-tree-shake-icons
-          if [ ! -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/app-release.apk
-          fi
+      - name: Build Release APK
+        run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -58,16 +43,9 @@ jobs:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Create Git Tag for Release
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          TAG_NAME="v1.0.${{ github.run_number }}"
-          git tag -f "$TAG_NAME"
-          git push -f origin "$TAG_NAME" || true
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Versión Automática v1.0.${{ github.run_number }}
@@ -80,6 +58,3 @@ jobs:
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-
