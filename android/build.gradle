@@ -10,22 +10,19 @@ subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
-subprojects { subproject ->
-    subproject.afterEvaluate {
-        if (subproject.plugins.hasPlugin("com.android.application") ||
-            subproject.plugins.hasPlugin("com.android.library")) {
-            try {
-                subproject.android {
-                    compileSdkVersion 34
-                    buildToolsVersion "34.0.0"
-                }
-            } catch (Exception ignored) {}
+subprojects { project ->
+    project.afterEvaluate {
+        if (project.hasProperty("android")) {
+            project.android {
+                compileSdkVersion 34
+                buildToolsVersion "34.0.0"
+            }
         }
     }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {
