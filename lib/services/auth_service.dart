@@ -125,14 +125,14 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _supabase.auth.resetPasswordForEmail(email);
+      await _supabase?.auth.resetPasswordForEmail(email);
     } catch (e) {
       print('Reseteo de contraseña enviado: $e');
     }
   }
 
   Future<User?> getCurrentUser() async {
-    final suUser = _supabase.auth.currentUser;
+    final suUser = _supabase?.auth.currentUser;
     if (suUser != null) {
       final name = suUser.userMetadata?['name'] ?? suUser.userMetadata?['full_name'] ?? suUser.email?.split('@').first ?? 'Usuario';
       return User(
@@ -150,7 +150,7 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await _supabase.auth.signOut();
+      await _supabase?.auth.signOut();
     } catch (e) {
       print('Sesión cerrada');
     }

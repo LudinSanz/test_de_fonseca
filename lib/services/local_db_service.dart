@@ -171,6 +171,10 @@ class LocalDbService {
     return await getList(_keyEvaluaciones, _seedEvaluaciones);
   }
 
+  static Future<void> saveEvaluacionesMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyEvaluaciones, list);
+  }
+
   static Future<void> upsertEvaluacionMap(Map<String, dynamic> evalData) async {
     final list = await getEvaluacionesMap();
     final String id = evalData['id']?.toString() ?? 'eval_${DateTime.now().millisecondsSinceEpoch}';
@@ -180,12 +184,16 @@ class LocalDbService {
     } else {
       list.insert(0, evalData);
     }
-    await saveList(_keyEvaluaciones, list);
+    await saveEvaluacionesMap(list);
   }
 
   // CITAS
   static Future<List<Map<String, dynamic>>> getCitasMap() async {
     return await getList(_keyCitas, _seedCitas);
+  }
+
+  static Future<void> saveCitasMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyCitas, list);
   }
 
   static Future<void> upsertCitaMap(Map<String, dynamic> citaData) async {
@@ -197,7 +205,7 @@ class LocalDbService {
     } else {
       list.insert(0, citaData);
     }
-    await saveList(_keyCitas, list);
+    await saveCitasMap(list);
   }
 
   static Future<void> deleteCitaMap(String id) async {
@@ -211,6 +219,10 @@ class LocalDbService {
     return await getList(_keyInventario, _seedInventario);
   }
 
+  static Future<void> saveInventarioMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyInventario, list);
+  }
+
   static Future<void> upsertInventarioMap(Map<String, dynamic> itemData) async {
     final list = await getInventarioMap();
     final String id = itemData['id']?.toString() ?? 'inv_${DateTime.now().millisecondsSinceEpoch}';
@@ -220,7 +232,7 @@ class LocalDbService {
     } else {
       list.insert(0, itemData);
     }
-    await saveList(_keyInventario, list);
+    await saveInventarioMap(list);
   }
 
   static Future<void> deleteInventarioMap(String id) async {
@@ -234,6 +246,10 @@ class LocalDbService {
     return await getList(_keyRecetas, _seedRecetas);
   }
 
+  static Future<void> saveRecetasMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyRecetas, list);
+  }
+
   static Future<void> upsertRecetaMap(Map<String, dynamic> recetaData) async {
     final list = await getRecetasMap();
     final String id = recetaData['id']?.toString() ?? 'receta_${DateTime.now().millisecondsSinceEpoch}';
@@ -243,6 +259,12 @@ class LocalDbService {
     } else {
       list.insert(0, recetaData);
     }
+    await saveRecetasMap(list);
+  }
+
+  static Future<void> deleteRecetaMap(String id) async {
+    final list = await getRecetasMap();
+    list.removeWhere((r) => r['id'].toString() == id);
     await saveRecetasMap(list);
   }
 

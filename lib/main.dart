@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'constants/supabase_constants.dart';
 import 'screens/login_screen.dart';
 import 'constants/colors.dart';
+import 'theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,10 +104,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class ThemeProvider extends ChangeNotifier {
-  bool isDarkMode = false;
-  void toggleTheme() {
-    isDarkMode = !isDarkMode;
-    notifyListeners();
-  }
-}
