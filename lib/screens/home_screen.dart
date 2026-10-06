@@ -45,47 +45,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _cargarDatosDoctor() async {
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        if (user.email != null && user.email!.isNotEmpty) {
-          _doctorEmail = user.email!;
-        }
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
 
-        var res = await Supabase.instance.client
-            .from('users')
-            .select()
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (res == null && user.email != null) {
-          res = await Supabase.instance.client
-              .from('users')
-              .select()
-              .eq('email', user.email!)
-              .maybeSingle();
-        }
-
-        if (res != null) {
-          final data = Map<String, dynamic>.from(res);
-          setState(() {
-            if (data['name'] != null && data['name'].toString().isNotEmpty) {
-              _doctorNombre = data['name'];
-            }
-            if (data['email'] != null && data['email'].toString().isNotEmpty) {
-              _doctorEmail = data['email'];
-            }
-            if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
-              _doctorEspecialidad = data['especialidad'];
-            }
-          });
-        } else {
-          final String userMetaName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
-          if (userMetaName.isNotEmpty) {
-            setState(() {
-              _doctorNombre = userMetaName;
-            });
+      final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
+      if (data != null) {
+        setState(() {
+          if (data['name'] != null && data['name'].toString().isNotEmpty) {
+            _doctorNombre = data['name'];
           }
-        }
+          if (data['email'] != null && data['email'].toString().isNotEmpty) {
+            _doctorEmail = data['email'];
+          }
+          if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
+            _doctorEspecialidad = data['especialidad'];
+          }
+        });
       }
     } catch (e) {
       debugPrint('Error al cargar datos del doctor en HomeScreen: $e');

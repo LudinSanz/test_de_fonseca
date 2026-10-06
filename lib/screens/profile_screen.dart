@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
+import '../services/supabase_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,11 +15,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _nombreController = TextEditingController(text: 'Dr. Ludin Solis');
   final TextEditingController _especialidadController = TextEditingController(text: 'Especialista en Disfunción ATM y Odontología');
-  final TextEditingController _colegiadoController = TextEditingController();
-  final TextEditingController _telefonoController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _colegiadoController = TextEditingController(text: 'COL-98421');
+  final TextEditingController _telefonoController = TextEditingController(text: '+502 5555 9999');
+  final TextEditingController _emailController = TextEditingController(text: 'doctor@clinic.gt');
   final TextEditingController _direccionController = TextEditingController(text: 'Edificio Sixtino II, Nivel 7, Oficina 702, Zona 10, Guatemala');
 
   double _btnScale = 1.0;
@@ -43,51 +44,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _cargarPerfilDoctor() async {
     setState(() => _isLoading = true);
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        if (user.email != null && user.email!.isNotEmpty) {
-          _emailController.text = user.email!;
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
+
+      final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+      if (data != null) {
+        if (data['name'] != null && data['name'].toString().isNotEmpty) {
+          _nombreController.text = data['name'];
         }
-
-        var res = await Supabase.instance.client
-            .from('users')
-            .select()
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (res == null && user.email != null) {
-          res = await Supabase.instance.client
-              .from('users')
-              .select()
-              .eq('email', user.email!)
-              .maybeSingle();
+        if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
+          _especialidadController.text = data['especialidad'];
         }
-
-        if (res != null) {
-          final data = Map<String, dynamic>.from(res);
-          if (data['name'] != null && data['name'].toString().isNotEmpty) {
-            _nombreController.text = data['name'];
-          }
-          if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
-            _especialidadController.text = data['especialidad'];
-          }
-          if (data['colegiado'] != null && data['colegiado'].toString().isNotEmpty) {
-            _colegiadoController.text = data['colegiado'];
-          }
-          if (data['telefono'] != null && data['telefono'].toString().isNotEmpty) {
-            _telefonoController.text = data['telefono'];
-          }
-          if (data['email'] != null && data['email'].toString().isNotEmpty) {
-            _emailController.text = data['email'];
-          }
-          if (data['direccion_clinica'] != null && data['direccion_clinica'].toString().isNotEmpty) {
-            _direccionController.text = data['direccion_clinica'];
-          }
-        } else {
-          final String userMetaName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
-          if (userMetaName.isNotEmpty) {
-            _nombreController.text = userMetaName;
-          }
+        if (data['colegiado'] != null && data['colegiado'].toString().isNotEmpty) {
+          _colegiadoController.text = data['colegiado'];
+        }
+        if (data['telefono'] != null && data['telefono'].toString().isNotEmpty) {
+          _telefonoController.text = data['telefono'];
+        }
+        if (data['email'] != null && data['email'].toString().isNotEmpty) {
+          _emailController.text = data['email'];
+        }
+        if (data['direccion_clinica'] != null && data['direccion_clinica'].toString().isNotEmpty) {
+          _direccionController.text = data['direccion_clinica'];
         }
       }
     } catch (e) {
@@ -100,8 +83,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _guardarPerfilDoctor() async {
     setState(() => _isSaving = true);
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      final String userId = user?.id ?? 'doctor_user_${DateTime.now().millisecondsSinceEpoch}';
+      final supabaseService = SupabaseService();
+      String userId = 'usr_doctor_demo';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) userId = u.id;
+      } catch (_) {}
 
       final doctorData = {
         'id': userId,
@@ -114,20 +101,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'firma_digital': '${_nombreController.text.trim()} - Colegiado #${_colegiadoController.text.trim()}',
       };
 
-      try {
-        await Supabase.instance.client.from('users').upsert(doctorData);
-      } catch (e1) {
-        await Supabase.instance.client.from('users').upsert({
-          'id': userId,
-          'name': _nombreController.text.trim(),
-          'email': _emailController.text.trim(),
-        });
-      }
+      await supabaseService.guardarPerfilDoctor(doctorData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('¡Perfil profesional guardado exitosamente en Supabase!'),
+            content: const Text('¡Perfil profesional guardado exitosamente!'),
             backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             behavior: SnackBarBehavior.floating,

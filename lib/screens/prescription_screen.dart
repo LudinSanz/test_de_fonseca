@@ -5,6 +5,7 @@ import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/signature_pad.dart';
+import '../services/supabase_service.dart';
 
 class PrescriptionScreen extends StatefulWidget {
   const PrescriptionScreen({super.key});
@@ -41,11 +42,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   Future<void> _cargarPacientes() async {
     setState(() => _isLoading = true);
     try {
-      final supabase = Supabase.instance.client;
-      final res = await supabase.from('pacientes').select();
-      final list = (res as List)
-          .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
-          .toList();
+      final supabaseService = SupabaseService();
+      final list = await supabaseService.obtenerPacientes();
 
       setState(() {
         _pacientes = list;
@@ -159,8 +157,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   }
 
   Future<void> _guardarYEnviarReceta({required bool viaWhatsApp, required String firmaDigitalConfirmada}) async {
-    final supabase = Supabase.instance.client;
-    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
+    final supabaseService = SupabaseService();
+    final doctorRes = await supabaseService.obtenerPerfilDoctor(Supabase.instance.client.auth.currentUser?.email ?? '');
 
     final String medTexto = _medicamentos.map((m) => '• ${m['nombre']} (${m['dosis']}) - C/${m['frecuencia_horas']}h por ${m['dias']} días').join('\n');
 
@@ -177,9 +175,9 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     };
 
     try {
-      await supabase.from('recetas').upsert(recetaData);
+      await supabaseService.guardarReceta(recetaData);
     } catch (e) {
-      debugPrint('Error al guardar receta en Supabase: $e');
+      debugPrint('Error al guardar receta: $e');
     }
 
     if (!mounted) return;

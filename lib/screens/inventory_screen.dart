@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
+import '../services/supabase_service.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -23,14 +24,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _cargarInventario() async {
     setState(() => _isLoading = true);
     try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('inventario')
-          .select()
-          .order('nombre', ascending: true);
+      final supabaseService = SupabaseService();
+      final response = await supabaseService.obtenerInventario();
 
       setState(() {
-        _items = List<Map<String, dynamic>>.from(response);
+        _items = response;
       });
     } catch (e) {
       debugPrint('Error al cargar inventario: $e');
@@ -115,49 +113,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       };
 
                       try {
-                        final supabase = Supabase.instance.client;
-                        await supabase.from('inventario').upsert(itemData);
+                        final supabaseService = SupabaseService();
+                        await supabaseService.guardarItemInventario(itemData);
                         if (!mounted) return;
                         Navigator.pop(ctx);
                         _cargarInventario();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('¡Ítem "${nombreController.text.trim()}" guardado en Supabase!'),
+                            content: Text('¡Ítem "${nombreController.text.trim()}" guardado exitosamente!'),
                             backgroundColor: AppColors.success,
                           ),
                         );
                       } catch (e) {
                         debugPrint('Error al guardar en inventario: $e');
-                        if (!mounted) return;
-                        final String errMsg = e.toString();
-                        if (errMsg.contains('row-level security') || errMsg.contains('42501')) {
-                          showDialog(
-                            context: context,
-                            builder: (dialogCtx) => AlertDialog(
-                              backgroundColor: AppColors.surfaceContainerLowest,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              title: const Text('Permisos de Supabase (RLS)', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                              content: const Text(
-                                'La tabla "inventario" en Supabase tiene activada la política de seguridad RLS.\n\nPara permitir guardar insumos desde la app, debes ejecutar en el Editor SQL de Supabase:\n\nALTER TABLE public.inventario DISABLE ROW LEVEL SECURITY;',
-                                style: TextStyle(fontSize: 13, color: AppColors.onSurface),
-                              ),
-                              actions: [
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(dialogCtx),
-                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                                  child: const Text('Entendido', style: TextStyle(color: Colors.white)),
-                                ),
-                              ],
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error al guardar: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
                       } finally {
                         setStateModal(() => saving = false);
                       }

@@ -67,11 +67,8 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   Future<void> _cargarPacientes() async {
     setState(() => _isLoadingPacientes = true);
     try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase.from('pacientes').select().order('nombre');
-      final list = (response as List)
-          .map((p) => Paciente.fromMap(Map<String, dynamic>.from(p), p['id'].toString()))
-          .toList();
+      final supabaseService = SupabaseService();
+      final list = await supabaseService.obtenerPacientes();
 
       setState(() {
         _allPacientes = list;
@@ -91,26 +88,6 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
       }
     } catch (e) {
       debugPrint('Error al cargar directorio de pacientes: $e');
-      if (mounted) {
-        final errStr = e.toString();
-        if (errStr.contains('row-level security') || errStr.contains('42501')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⚠️ Permisos de Supabase: Ejecuta "ALTER TABLE public.pacientes DISABLE ROW LEVEL SECURITY;" en el SQL Editor de Supabase.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 6),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al conectar con Supabase: $e'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      }
     } finally {
       if (mounted) setState(() => _isLoadingPacientes = false);
     }
@@ -118,35 +95,18 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
 
   Future<void> _cargarHistorialPaciente(Paciente paciente) async {
     setState(() => _isLoadingHistorial = true);
-    final supabase = Supabase.instance.client;
+    final supabaseService = SupabaseService();
 
     try {
-      // 1. Evaluaciones ATM / Fonseca
-      final evalResponse = await supabase
-          .from('evaluaciones')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
-
-      // 2. Recetas Médicas
-      final recetasResponse = await supabase
-          .from('recetas')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
-
-      // 3. Citas Médicas
-      final citasResponse = await supabase
-          .from('citas')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
+      final evalResponse = await supabaseService.obtenerEvaluaciones(pacienteId: paciente.id);
+      final recetasResponse = await supabaseService.obtenerRecetas(pacienteId: paciente.id);
+      final citasResponse = await supabaseService.obtenerCitas(pacienteId: paciente.id);
 
       if (mounted) {
         setState(() {
-          _evaluaciones = List<Map<String, dynamic>>.from(evalResponse);
-          _recetas = List<Map<String, dynamic>>.from(recetasResponse);
-          _citas = List<Map<String, dynamic>>.from(citasResponse);
+          _evaluaciones = evalResponse;
+          _recetas = recetasResponse;
+          _citas = citasResponse;
         });
       }
     } catch (e) {

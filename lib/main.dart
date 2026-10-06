@@ -8,10 +8,14 @@ import 'constants/colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: SupabaseConstants.supabaseUrl,
-    anonKey: SupabaseConstants.supabaseAnonKey,
-  );
+  try {
+    await Supabase.initialize(
+      url: SupabaseConstants.supabaseUrl,
+      anonKey: SupabaseConstants.supabaseAnonKey,
+    );
+  } catch (e) {
+    debugPrint('Aviso: Supabase no pudo inicializarse en red, usando base de datos local: $e');
+  }
   runApp(const MyApp());
 }
 

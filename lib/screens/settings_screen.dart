@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme_provider.dart';
 import '../constants/colors.dart';
+import '../models/configuracion_app.dart';
+import '../services/supabase_service.dart';
 import 'profile_screen.dart';
 import 'help_screen.dart';
 
@@ -26,19 +28,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _cargarConfiguracionSupabase() async {
     setState(() => _isLoading = true);
     try {
-      final res = await Supabase.instance.client
-          .from('configuracion')
-          .select()
-          .eq('id', 'global')
-          .maybeSingle();
+      final supabaseService = SupabaseService();
+      final config = await supabaseService.obtenerConfiguracion('global');
 
-      if (res != null) {
+      if (config != null) {
         setState(() {
-          _notificacionesActivas = res['notificaciones'] ?? true;
+          _notificacionesActivas = config.parametros['notificaciones'] ?? true;
         });
       }
     } catch (e) {
-      debugPrint('Error al cargar configuración de Supabase: $e');
+      debugPrint('Error al cargar configuración: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -47,13 +46,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _guardarConfiguracion(bool val) async {
     setState(() => _notificacionesActivas = val);
     try {
-      await Supabase.instance.client.from('configuracion').upsert({
-        'id': 'global',
-        'notificaciones': val,
-        'tema': 'light',
-      });
+      final supabaseService = SupabaseService();
+      final config = ConfiguracionApp(
+        id: 'global',
+        version: '1.0.6',
+        mensajeBienvenida: 'Bienvenido a Rizo Dental',
+        parametros: {'notificaciones': val, 'tema': 'light'},
+      );
+      await supabaseService.guardarConfiguracion(config);
     } catch (e) {
-      debugPrint('Error al guardar configuración en Supabase: $e');
+      debugPrint('Error al guardar configuración: $e');
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
+import '../services/supabase_service.dart';
 
 class FonsecaTestScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -81,11 +82,8 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
   Future<void> _cargarPacientes() async {
     setState(() => _loadingPacientes = true);
     try {
-      final supabase = Supabase.instance.client;
-      final res = await supabase.from('pacientes').select().order('nombre');
-      final list = (res as List)
-          .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
-          .toList();
+      final supabaseService = SupabaseService();
+      final list = await supabaseService.obtenerPacientes();
 
       setState(() {
         _pacientes = list;
@@ -178,7 +176,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         ? '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}'
         : 'Paciente General';
 
-    final supabase = Supabase.instance.client;
+    final supabaseService = SupabaseService();
     
     final evaluacionData = {
       'id': 'fonseca_${DateTime.now().millisecondsSinceEpoch}',
@@ -195,9 +193,9 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
     };
 
     try {
-      await supabase.from('evaluaciones').upsert(evaluacionData);
+      await supabaseService.guardarEvaluacion(evaluacionData);
     } catch (e) {
-      debugPrint('Error al guardar evaluación en Supabase: $e');
+      debugPrint('Error al guardar evaluación en Fonseca: $e');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

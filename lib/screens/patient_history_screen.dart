@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/paciente.dart';
 import '../constants/colors.dart';
 import '../utils/pdf_generator.dart';
+import '../services/supabase_service.dart';
 import 'fonseca_test_screen.dart';
 import 'appointments_screen.dart';
 import 'prescription_screen.dart';
@@ -44,9 +45,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
   Future<void> _cargarPacientes() async {
     setState(() => _isLoadingPacientes = true);
     try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase.from('pacientes').select().order('nombre');
-      final list = (response as List).map((p) => Paciente.fromMap(Map<String, dynamic>.from(p), p['id'].toString())).toList();
+      final supabaseService = SupabaseService();
+      final list = await supabaseService.obtenerPacientes();
 
       setState(() {
         _pacientes = list;
@@ -72,35 +72,18 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
 
   Future<void> _cargarHistorialPaciente(Paciente paciente) async {
     setState(() => _isLoadingHistorial = true);
-    final supabase = Supabase.instance.client;
+    final supabaseService = SupabaseService();
 
     try {
-      // 1. Evaluaciones ATM / Fonseca
-      final evalResponse = await supabase
-          .from('evaluaciones')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
-
-      // 2. Recetas Médicas
-      final recetasResponse = await supabase
-          .from('recetas')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
-
-      // 3. Citas Médicas
-      final citasResponse = await supabase
-          .from('citas')
-          .select()
-          .or('paciente_id.eq.${paciente.id},paciente_nombre.ilike.%${paciente.nombre}%')
-          .order('created_at', ascending: false);
+      final evalResponse = await supabaseService.obtenerEvaluaciones(pacienteId: paciente.id);
+      final recetasResponse = await supabaseService.obtenerRecetas(pacienteId: paciente.id);
+      final citasResponse = await supabaseService.obtenerCitas(pacienteId: paciente.id);
 
       if (mounted) {
         setState(() {
-          _evaluaciones = List<Map<String, dynamic>>.from(evalResponse);
-          _recetas = List<Map<String, dynamic>>.from(recetasResponse);
-          _citas = List<Map<String, dynamic>>.from(citasResponse);
+          _evaluaciones = evalResponse;
+          _recetas = recetasResponse;
+          _citas = citasResponse;
         });
       }
     } catch (e) {

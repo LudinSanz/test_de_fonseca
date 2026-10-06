@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
+import '../services/supabase_service.dart';
 import '../constants/colors.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
@@ -73,13 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (user != null) {
-        // Verificar si el usuario ya existe previamente registrado en la tabla users de Supabase
-        final supabase = Supabase.instance.client;
-        final existingUser = await supabase
-            .from('users')
-            .select()
-            .eq('email', user.email)
-            .maybeSingle();
+        final supabaseService = SupabaseService();
+        final existingUser = await supabaseService.obtenerPerfilDoctor(user.email);
 
         if (existingUser != null) {
           final nombreRegistrado = existingUser['name'] ?? user.name;
@@ -96,8 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          // El usuario NO está registrado previamente -> Denegar acceso
-          await supabase.auth.signOut();
+          try {
+            await Supabase.instance.client.auth.signOut();
+          } catch (_) {}
           _mostrarDialogoNoRegistrado(user.email);
         }
       }
@@ -124,26 +121,12 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null && mounted) {
-        final supabase = Supabase.instance.client;
+        final supabaseService = SupabaseService();
         final String searchEmail = user.email.trim();
 
-        // 1. Consultar si el correo de Google ya existe en la tabla 'users' de Supabase
-        Map<String, dynamic>? existingUser;
-        try {
-          var res = await supabase
-              .from('users')
-              .select()
-              .ilike('email', searchEmail)
-              .maybeSingle();
-          if (res != null) {
-            existingUser = Map<String, dynamic>.from(res);
-          }
-        } catch (e) {
-          debugPrint('Aviso en consulta ilike users: $e');
-        }
+        Map<String, dynamic>? existingUser = await supabaseService.obtenerPerfilDoctor(searchEmail);
 
-        if (existingUser != null) {
-          // SI YA EXISTE EL CORREO REGISTRADO PREVIAMENTE -> Entrar directamente
+        if (existingUser != null && existingUser['name'] != null) {
           final nombrePerfil = existingUser['name'] ?? user.name;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -158,9 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          // Registrar automáticamente usuario en 'users' para evitar bloquear el ingreso
           try {
-            await supabase.from('users').upsert({
+            await supabaseService.guardarPerfilDoctor({
               'id': user.id,
               'name': user.name,
               'email': searchEmail,

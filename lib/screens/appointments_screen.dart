@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
+import '../services/supabase_service.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -13,7 +14,7 @@ class AppointmentsScreen extends StatefulWidget {
 }
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
-  bool _isLoading = true;
+  bool _isLoading = false;
   List<Paciente> _pacientes = [];
   List<Map<String, dynamic>> _citas = [];
 
@@ -26,20 +27,16 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
     try {
-      final supabase = Supabase.instance.client;
-      final pacRes = await supabase.from('pacientes').select();
-      final citasRes = await supabase.from('citas').select().order('fecha_hora', ascending: true);
-
-      final pacList = (pacRes as List)
-          .map((map) => Paciente.fromMap(Map<String, dynamic>.from(map), map['id'].toString()))
-          .toList();
+      final supabaseService = SupabaseService();
+      final pacList = await supabaseService.obtenerPacientes();
+      final citasRes = await supabaseService.obtenerCitas();
 
       setState(() {
         _pacientes = pacList;
-        _citas = List<Map<String, dynamic>>.from(citasRes);
+        _citas = citasRes;
       });
     } catch (e) {
-      debugPrint('Error al cargar citas de Supabase: $e');
+      debugPrint('Error al cargar citas: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -145,13 +142,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 };
 
                 try {
-                  final supabase = Supabase.instance.client;
-                  await supabase.from('citas').upsert(citaData);
+                  final supabaseService = SupabaseService();
+                  await supabaseService.guardarCita(citaData);
                   if (!mounted) return;
                   Navigator.pop(ctx);
                   _cargarDatos();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('¡Cita programada y guardada en Supabase!'), backgroundColor: AppColors.success),
+                    const SnackBar(content: Text('¡Cita programada exitosamente!'), backgroundColor: AppColors.success),
                   );
                 } catch (e) {
                   debugPrint('Error al guardar cita: $e');

@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/reporte.dart';
 import '../constants/colors.dart';
+import '../services/supabase_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   final List<Reporte>? reportes;
@@ -27,17 +28,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _cargarHistoricoSupabase() async {
     setState(() => _isLoading = true);
     try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('evaluaciones')
-          .select()
-          .order('created_at', ascending: false);
+      final supabaseService = SupabaseService();
+      final response = await supabaseService.obtenerEvaluaciones();
 
       setState(() {
-        _evaluacionesHistoricas = List<Map<String, dynamic>>.from(response);
+        _evaluacionesHistoricas = response;
       });
     } catch (e) {
-      debugPrint('Error al cargar histórico de Supabase: $e');
+      debugPrint('Error al cargar histórico: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

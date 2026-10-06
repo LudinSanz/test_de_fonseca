@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
+import '../services/supabase_service.dart';
 
 class QuickEvaluationScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -38,11 +39,8 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
   Future<void> _cargarPacientes() async {
     setState(() => _loadingPacientes = true);
     try {
-      final supabase = Supabase.instance.client;
-      final res = await supabase.from('pacientes').select().order('nombre');
-      final list = (res as List)
-          .map((m) => Paciente.fromMap(Map<String, dynamic>.from(m), m['id'].toString()))
-          .toList();
+      final supabaseService = SupabaseService();
+      final list = await supabaseService.obtenerPacientes();
 
       setState(() {
         _pacientes = list;
@@ -130,8 +128,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
       'cefalea_cervical': _cefaleaCervical ? 'Sí' : 'No',
     };
 
-    // Sincronización automática a Supabase vinculada al historial del paciente
-    final supabase = Supabase.instance.client;
+    final supabaseService = SupabaseService();
     final evaluacionData = {
       'id': 'eval_rapida_${DateTime.now().millisecondsSinceEpoch}',
       'paciente_id': _pacienteSeleccionado!.id,
@@ -144,9 +141,9 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
     };
 
     try {
-      await supabase.from('evaluaciones').upsert(evaluacionData);
+      await supabaseService.guardarEvaluacion(evaluacionData);
     } catch (e) {
-      debugPrint('Error al guardar evaluación rápida en Supabase: $e');
+      debugPrint('Error al guardar evaluación rápida: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
