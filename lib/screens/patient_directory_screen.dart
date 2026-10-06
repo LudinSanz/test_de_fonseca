@@ -8,6 +8,7 @@ import 'patient_register_screen.dart';
 import 'fonseca_test_screen.dart';
 import 'appointments_screen.dart';
 import 'prescription_screen.dart';
+import '../services/supabase_service.dart';
 
 class PatientDirectoryScreen extends StatefulWidget {
   final Paciente? selectedPatient;
