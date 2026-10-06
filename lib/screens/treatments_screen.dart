@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
-import 'patient_directory_screen.dart';
 
 class TreatmentsScreen extends StatefulWidget {
   final Paciente? paciente;
