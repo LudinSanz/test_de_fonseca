@@ -2,6 +2,90 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 
+class SignatureCanvasWidget extends StatefulWidget {
+  final List<Offset?> points;
+  final VoidCallback onClear;
+  final Function(Offset localPos)? onPanUpdate;
+  final VoidCallback? onPanEnd;
+  final String? placeholder;
+
+  const SignatureCanvasWidget({
+    super.key,
+    required this.points,
+    required this.onClear,
+    this.onPanUpdate,
+    this.onPanEnd,
+    this.placeholder,
+  });
+
+  @override
+  State<SignatureCanvasWidget> createState() => _SignatureCanvasWidgetState();
+}
+
+class _SignatureCanvasWidgetState extends State<SignatureCanvasWidget> {
+  final GlobalKey _canvasKey = GlobalKey();
+
+  bool get _hasSignature => widget.points.where((p) => p != null).isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: _canvasKey,
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.ghostOutline, width: 1.2),
+      ),
+      child: Stack(
+        children: [
+          GestureDetector(
+            onPanStart: (details) {
+              final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+              if (renderBox != null) {
+                final Offset localPos = renderBox.globalToLocal(details.globalPosition);
+                widget.onPanUpdate?.call(localPos);
+              }
+            },
+            onPanUpdate: (details) {
+              final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+              if (renderBox != null) {
+                final Offset localPos = renderBox.globalToLocal(details.globalPosition);
+                widget.onPanUpdate?.call(localPos);
+              }
+            },
+            onPanEnd: (details) {
+              widget.onPanEnd?.call();
+            },
+            child: CustomPaint(
+              painter: SignaturePainter(widget.points),
+              size: Size.infinite,
+            ),
+          ),
+          if (!_hasSignature)
+            Center(
+              child: Text(
+                widget.placeholder ?? 'Firme aquí con el dedo o lápiz ✍️',
+                style: const TextStyle(color: AppColors.textLight, fontSize: 13, fontStyle: FontStyle.italic),
+              ),
+            ),
+          if (_hasSignature)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: TextButton.icon(
+                onPressed: widget.onClear,
+                icon: const Icon(Icons.cleaning_services_outlined, size: 16, color: AppColors.error),
+                label: const Text('Limpiar', style: TextStyle(fontSize: 12, color: AppColors.error)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class SignaturePadDialog extends StatefulWidget {
   final String doctorName;
   final String doctorColegiado;
@@ -56,63 +140,26 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Por favor dibuja tu firma digital en el recuadro para autorizar la prescripción clínica:',
-              style: const TextStyle(fontSize: 12, color: AppColors.textLight),
+              style: TextStyle(fontSize: 12, color: AppColors.textLight),
             ),
             const SizedBox(height: 12),
-
-            // Canvas de Firma con Trazo
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.ghostOutline, width: 1.2),
-              ),
-              child: Stack(
-                children: [
-                  GestureDetector(
-                    onPanUpdate: (DragUpdateDetails details) {
-                      RenderBox renderBox = context.findRenderObject() as RenderBox;
-                      Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-                      // Ajustar offset local al canvas
-                      setState(() {
-                        _points.add(localPosition);
-                      });
-                    },
-                    onPanEnd: (DragEndDetails details) {
-                      setState(() {
-                        _points.add(null);
-                      });
-                    },
-                    child: CustomPaint(
-                      painter: SignaturePainter(_points),
-                      size: Size.infinite,
-                    ),
-                  ),
-                  if (!_hasSignature)
-                    const Center(
-                      child: Text(
-                        'Firme aquí con el dedo o lápiz ✍️',
-                        style: TextStyle(color: AppColors.textLight, fontSize: 13, fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: TextButton.icon(
-                      onPressed: _clearSignature,
-                      icon: const Icon(Icons.cleaning_services_outlined, size: 16, color: AppColors.error),
-                      label: const Text('Borrar', style: TextStyle(fontSize: 12, color: AppColors.error)),
-                    ),
-                  ),
-                ],
-              ),
+            SignatureCanvasWidget(
+              points: _points,
+              onClear: _clearSignature,
+              onPanUpdate: (pos) {
+                setState(() {
+                  _points.add(pos);
+                });
+              },
+              onPanEnd: () {
+                setState(() {
+                  _points.add(null);
+                });
+              },
             ),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 const Icon(Icons.verified_outlined, size: 16, color: AppColors.success),
@@ -159,7 +206,7 @@ class SignaturePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
+    final Paint paint = Paint()
       ..color = AppColors.primary
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 3.5;

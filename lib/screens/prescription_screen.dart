@@ -33,6 +33,10 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
     text: 'Mantener reposo mandibular, dieta blanda por 7 días y evitar masticar hielo o chicle.',
   );
 
+  final List<Offset?> _signaturePoints = [];
+
+  bool get _hasScreenSignature => _signaturePoints.where((p) => p != null).isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -131,34 +135,54 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       return;
     }
 
-    final supabase = Supabase.instance.client;
-    final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
-    
+    final supabaseService = SupabaseService();
+    final currentUserEmail = Supabase.instance.client.auth.currentUser?.email ?? '';
+    final doctorRes = await supabaseService.obtenerPerfilDoctor(currentUserEmail);
+
     final doctorName = doctorRes?['name'] ?? 'Dr. Rizo Dental';
     final doctorColegiado = doctorRes?['colegiado'] ?? '0000';
 
-    if (!mounted) return;
+    String firmaConfirmada = '';
 
-    final firmaObtenida = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => SignaturePadDialog(
-        doctorName: doctorName,
-        doctorColegiado: doctorColegiado,
-      ),
-    );
-
-    if (firmaObtenida != null && firmaObtenida.isNotEmpty) {
-      await _guardarYEnviarReceta(
-        viaWhatsApp: viaWhatsApp,
-        firmaDigitalConfirmada: firmaObtenida,
+    if (_hasScreenSignature) {
+      firmaConfirmada = 'Firma Digital Dibujada por Dr(a). $doctorName (Colegiado #$doctorColegiado)';
+    } else {
+      if (!mounted) return;
+      final modalFirma = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => SignaturePadDialog(
+          doctorName: doctorName,
+          doctorColegiado: doctorColegiado,
+        ),
       );
+
+      if (modalFirma != null && modalFirma.isNotEmpty) {
+        firmaConfirmada = modalFirma;
+      }
     }
+
+    if (firmaConfirmada.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes firmar la receta médica en el recuadro antes de exportarla.'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
+
+    await _guardarYEnviarReceta(
+      viaWhatsApp: viaWhatsApp,
+      firmaDigitalConfirmada: firmaConfirmada,
+      doctorRes: doctorRes,
+    );
   }
 
-  Future<void> _guardarYEnviarReceta({required bool viaWhatsApp, required String firmaDigitalConfirmada}) async {
+  Future<void> _guardarYEnviarReceta({
+    required bool viaWhatsApp,
+    required String firmaDigitalConfirmada,
+    required Map<String, dynamic>? doctorRes,
+  }) async {
     final supabaseService = SupabaseService();
-    final doctorRes = await supabaseService.obtenerPerfilDoctor(Supabase.instance.client.auth.currentUser?.email ?? '');
 
     final String medTexto = _medicamentos.map((m) => '• ${m['nombre']} (${m['dosis']}) - C/${m['frecuencia_horas']}h por ${m['dias']} días').join('\n');
 
@@ -171,7 +195,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       'indicaciones': _indicacionesGeneralesController.text.trim(),
       'indicaciones_generales': _indicacionesGeneralesController.text.trim(),
       'doctor_nombre': doctorRes?['name'] ?? 'Dr. Rizo Dental',
-      'firma_digital': firmaDigitalConfirmada.isNotEmpty ? firmaDigitalConfirmada : (doctorRes?['firma_digital'] ?? 'Rizo Dental Sanctuary Digital Seal'),
+      'firma_digital': firmaDigitalConfirmada,
     };
 
     try {
@@ -411,6 +435,61 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                             controller: _indicacionesGeneralesController,
                             maxLines: 3,
                             decoration: _inputDecoration('Indicaciones generales para el paciente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 4. Interactive Signature Canvas Directly on Screen
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: const [
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '4. Firma Digital del Doctor / Odontólogo:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                              ),
+                              if (_hasScreenSignature)
+                                const Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('Firmado', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success)),
+                                  ],
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SignatureCanvasWidget(
+                            points: _signaturePoints,
+                            placeholder: 'Trace su firma aquí con el dedo o lápiz táctil ✍️',
+                            onClear: () {
+                              setState(() {
+                                _signaturePoints.clear();
+                              });
+                            },
+                            onPanUpdate: (pos) {
+                              setState(() {
+                                _signaturePoints.add(pos);
+                              });
+                            },
+                            onPanEnd: () {
+                              setState(() {
+                                _signaturePoints.add(null);
+                              });
+                            },
                           ),
                         ],
                       ),
