@@ -281,7 +281,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: AppColors.primaryContainer,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),

@@ -44,7 +44,7 @@ class _MessagesScreenState extends State<MessagesScreen> with SingleTickerProvid
       'hora': '10:00 PM',
       'estado': 'Programado',
       'icono': Icons.nightlight_round_outlined,
-      'color': AppColors.accent,
+      'color': AppColors.info,
     },
   ];
 
