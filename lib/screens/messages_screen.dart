@@ -604,7 +604,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             _infoRow(Icons.phone, 'Teléfono', p.telefono),
             _infoRow(Icons.email_outlined, 'Email', p.email.isNotEmpty ? p.email : 'Sin registro'),
             _infoRow(Icons.location_on_outlined, 'Dirección', p.direccion.isNotEmpty ? p.direccion : 'Sin registro'),
-            _infoRow(Icons.cake_outlined, 'Fecha Nac.', p.fechaNacimiento),
+            _infoRow(Icons.cake_outlined, 'Fecha Nac.', p.fechaNacimiento.toString().split(' ').first),
           ],
         ),
         actions: [
