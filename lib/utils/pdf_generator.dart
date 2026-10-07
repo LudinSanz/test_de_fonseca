@@ -771,7 +771,7 @@ class PdfGenerator {
                     pw.Text('${ev['puntuacion'] ?? 0} pts', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   ],
                 ),
-              )).toList(),
+              )),
             pw.SizedBox(height: 16),
 
             // Section 3: Citas E Historial de Atenciones
@@ -801,7 +801,7 @@ class PdfGenerator {
                     pw.Text(c['estado'] ?? 'Programada', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
                   ],
                 ),
-              )).toList(),
+              )),
             pw.SizedBox(height: 16),
 
             // Section 4: Plan de Tratamiento y Presupuesto
@@ -830,7 +830,7 @@ class PdfGenerator {
                     pw.Text('Q ${(t['precio'] ?? t['costo'] ?? 0.0).toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   ],
                 ),
-              )).toList(),
+              )),
 
             pw.SizedBox(height: 20),
             pw.Divider(),
