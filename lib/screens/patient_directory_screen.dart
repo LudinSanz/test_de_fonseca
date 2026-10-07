@@ -99,15 +99,17 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
     final supabaseService = SupabaseService();
 
     try {
-      final evalResponse = await supabaseService.obtenerEvaluaciones(pacienteId: paciente.id);
-      final recetasResponse = await supabaseService.obtenerRecetas(pacienteId: paciente.id);
-      final citasResponse = await supabaseService.obtenerCitas(pacienteId: paciente.id);
+      final results = await Future.wait([
+        supabaseService.obtenerEvaluaciones(pacienteId: paciente.id),
+        supabaseService.obtenerRecetas(pacienteId: paciente.id),
+        supabaseService.obtenerCitas(pacienteId: paciente.id),
+      ]);
 
       if (mounted) {
         setState(() {
-          _evaluaciones = evalResponse;
-          _recetas = recetasResponse;
-          _citas = citasResponse;
+          _evaluaciones = results[0] as List<Map<String, dynamic>>;
+          _recetas = results[1] as List<Map<String, dynamic>>;
+          _citas = results[2] as List<Map<String, dynamic>>;
         });
       }
     } catch (e) {
