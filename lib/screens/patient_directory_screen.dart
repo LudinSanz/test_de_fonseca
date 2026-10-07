@@ -141,6 +141,30 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
     }
   }
 
+  void _imprimirExpedienteCompleto() async {
+    if (_selectedPaciente == null) return;
+    try {
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
+      final doctorInfo = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+      await PdfGenerator.generarPdfExpedienteCompleto(
+        paciente: _selectedPaciente!,
+        evaluaciones: _evaluaciones,
+        citas: _citas,
+        recetas: _recetas,
+        tratamientos: [],
+        doctorInfo: doctorInfo,
+      );
+    } catch (e) {
+      debugPrint('Error al imprimir expediente completo: $e');
+    }
+  }
+
   Color _getSeverityColor(String diagnostico) {
     if (diagnostico.contains('Sin Disfunción') || diagnostico.contains('Bajo')) {
       return AppColors.success;
@@ -409,6 +433,11 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                                   MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
                                 ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
                               },
+                            ),
+                            _buildQuickActionButton(
+                              icon: Icons.picture_as_pdf_outlined,
+                              label: 'Expediente PDF',
+                              onTap: _imprimirExpedienteCompleto,
                             ),
                           ],
                         ),

@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
+import 'fonseca_test_screen.dart';
+import 'treatments_screen.dart';
 
 class QuickEvaluationScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -225,38 +227,75 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
             // Botón Exportar PDF
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 44,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf, size: 20, color: AppColors.primary),
+                icon: const Icon(Icons.picture_as_pdf, size: 18, color: AppColors.primary),
                 label: const Text(
                   'Exportar Informe PDF Rizo',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                 ),
                 onPressed: () => _generarPDFCompartir(score, diagnostico, respuestasMap),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Botón Volver al Dashboard
+            // Botón Derivar a Test de Fonseca
             SizedBox(
               width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
+              height: 44,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
+                label: const Text('Derivar a Test de Fonseca', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FonsecaTestScreen()),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('Finalizar y Volver al Inicio', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
+            ),
+            const SizedBox(height: 8),
+
+            // Botón Crear Plan de Tratamiento y Presupuesto
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.medical_services_outlined, size: 18, color: Colors.white),
+                label: const Text('Crear Plan de Tratamiento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => TreatmentsScreen(paciente: _pacienteSeleccionado)),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Botón Volver al Dashboard
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: const Text('Volver al Inicio', style: TextStyle(color: AppColors.textLight, fontSize: 13)),
             ),
           ],
         ),

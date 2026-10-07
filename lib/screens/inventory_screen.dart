@@ -284,16 +284,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             final item = filteredItems[index];
                             final int cantidad = item['cantidad'] ?? 0;
                             final int minStock = item['stock_minimo'] ?? 5;
-                            final bool lowStock = cantidad <= minStock;
+
+                            Color statusColor;
+                            String statusLabel;
+                            IconData statusIcon;
+
+                            if (cantidad == 0) {
+                              statusColor = const Color(0xFFC62828); // 🔴 Rojo Agotado
+                              statusLabel = '🔴 Agotado / Reordenar Urgente';
+                              statusIcon = Icons.cancel_outlined;
+                            } else if (cantidad <= minStock) {
+                              statusColor = const Color(0xFFF57F17); // 🟡 Amarillo Bajo
+                              statusLabel = '🟡 Stock Bajo';
+                              statusIcon = Icons.warning_amber_rounded;
+                            } else {
+                              statusColor = const Color(0xFF2E7D32); // 🟢 Verde Suficiente
+                              statusLabel = '🟢 Stock Suficiente';
+                              statusIcon = Icons.check_circle_outline;
+                            }
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceContainerLowest,
                                 borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: statusColor.withOpacity(0.3), width: 1.2),
                                 boxShadow: const [
-                                  BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
+                                  BoxShadow(color: AppColors.shadowSoft, blurRadius: 18, offset: Offset(0, 6)),
                                 ],
                               ),
                               child: Row(
@@ -301,31 +319,85 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: (lowStock ? AppColors.error : AppColors.primary).withOpacity(0.12),
+                                      color: statusColor.withOpacity(0.12),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
-                                      lowStock ? Icons.warning_amber_rounded : Icons.inventory_2,
-                                      color: lowStock ? AppColors.error : AppColors.primary,
+                                      statusIcon,
+                                      color: statusColor,
+                                      size: 24,
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(item['nombre'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface)),
+                                        Text(
+                                          item['nombre'] ?? '',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface),
+                                        ),
                                         const SizedBox(height: 2),
                                         Text(
                                           '${item['categoria']} • $cantidad ${item['unidad'] ?? "unidades"}',
-                                          style: TextStyle(fontSize: 12, color: lowStock ? AppColors.error : AppColors.textLight, fontWeight: lowStock ? FontWeight.bold : FontWeight.normal),
+                                          style: const TextStyle(fontSize: 12, color: AppColors.textLight),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            statusLabel,
+                                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
-                                    onPressed: () => _abrirModalAgregarEditar(item: item),
+
+                                  // Quick Adjustment Buttons (- and +)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_circle_outline, color: AppColors.error, size: 24),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () async {
+                                          final newQty = (cantidad - 1).clamp(0, 999999);
+                                          item['cantidad'] = newQty;
+                                          final supabaseService = SupabaseService();
+                                          await supabaseService.guardarItemInventario(item);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text(
+                                          '$cantidad',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.add_circle_outline, color: AppColors.success, size: 24),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () async {
+                                          final newQty = cantidad + 1;
+                                          item['cantidad'] = newQty;
+                                          final supabaseService = SupabaseService();
+                                          await supabaseService.guardarItemInventario(item);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 20),
+                                        onPressed: () => _abrirModalAgregarEditar(item: item),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

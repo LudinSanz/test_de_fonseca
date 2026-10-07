@@ -163,6 +163,24 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     ? citaExistente['id']
                     : 'cita_${DateTime.now().millisecondsSinceEpoch}';
 
+                final String targetIso = dtCombined.toIso8601String().substring(0, 16);
+                final bool existeConflicto = _citas.any((c) {
+                  if (c['id'] == citaId) return false;
+                  final String existingIso = (c['fecha_hora'] ?? '').toString();
+                  return existingIso.startsWith(targetIso);
+                });
+
+                if (existeConflicto && citaExistente == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('⚠️ Ya existe una cita o bloqueo de agenda registrado en esa hora.'),
+                      backgroundColor: AppColors.warning,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+
                 final citaData = {
                   'id': citaId,
                   'paciente_id': pacienteSeleccionado!.id,
@@ -171,7 +189,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   'fecha_hora': dtCombined.toIso8601String(),
                   'fecha': '${dtCombined.day.toString().padLeft(2, '0')}/${dtCombined.month.toString().padLeft(2, '0')}/${dtCombined.year}',
                   'hora': '${dtCombined.hour.toString().padLeft(2, '0')}:${dtCombined.minute.toString().padLeft(2, '0')}',
-                  'motivo': motivoController.text.trim(),
+                  'motivo': motivoController.text.trim().isEmpty ? 'Consulta Odontológica' : motivoController.text.trim(),
                   'notas': notasController.text.trim(),
                   'estado': 'Programada',
                   'requiere_reprogramacion': false,

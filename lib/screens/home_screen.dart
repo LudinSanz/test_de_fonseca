@@ -16,6 +16,7 @@ import 'help_screen.dart';
 import 'patient_history_screen.dart';
 import 'patient_directory_screen.dart';
 import 'treatments_screen.dart';
+import 'messages_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
 import '../services/supabase_service.dart';
@@ -130,7 +131,10 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 3:
-        _abrirChatWhatsAppClinica();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MessagesScreen()),
+        );
         break;
       case 4:
         Navigator.push(
