@@ -749,91 +749,88 @@ class PdfGenerator {
             pw.Text('HISTORIAL DE EVALUACIONES DE ATM Y TEST FONSECA:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
             pw.SizedBox(height: 6),
             if (evaluaciones.isEmpty)
-              pw.Text('Sin evaluaciones registradas.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700))
-            else
-              for (var ev in evaluaciones)
-                pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 6),
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
-                    borderRadius: pw.BorderRadius.circular(6),
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(ev['diagnostico'] ?? 'Evaluación Odontológica', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                          pw.Text('Fecha: ${ev['fecha'] ?? "Sin fecha"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                        ],
-                      ),
-                      pw.Text('${ev['puntuacion'] ?? 0} pts', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                    ],
-                  ),
+              pw.Text('Sin evaluaciones registradas.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            if (evaluaciones.isNotEmpty)
+              ...evaluaciones.map((ev) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 6),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                  borderRadius: pw.BorderRadius.circular(6),
                 ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(ev['diagnostico'] ?? 'Evaluación Odontológica', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Fecha: ${ev['fecha'] ?? "Sin fecha"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      ],
+                    ),
+                    pw.Text('${ev['puntuacion'] ?? 0} pts', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  ],
+                ),
+              )).toList(),
             pw.SizedBox(height: 16),
 
             // Section 3: Citas E Historial de Atenciones
             pw.Text('HISTORIAL DE CITAS Y CONTROLES:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
             pw.SizedBox(height: 6),
             if (citas.isEmpty)
-              pw.Text('Sin citas previas registradas.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700))
-            else
-              for (var c in citas)
-                pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 6),
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
-                    borderRadius: pw.BorderRadius.circular(6),
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('${c['motivo'] ?? "Consulta"} (${c['fecha'] ?? c['fecha_hora'] ?? ""})', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                          if (c['notas'] != null && c['notas'].toString().isNotEmpty)
-                            pw.Text('Notas: ${c['notas']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                        ],
-                      ),
-                      pw.Text(c['estado'] ?? 'Programada', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
-                    ],
-                  ),
+              pw.Text('Sin citas previas registradas.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            if (citas.isNotEmpty)
+              ...citas.map((c) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 6),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                  borderRadius: pw.BorderRadius.circular(6),
                 ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('${c['motivo'] ?? "Consulta"} (${c['fecha'] ?? c['fecha_hora'] ?? ""})', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        if (c['notas'] != null && c['notas'].toString().isNotEmpty)
+                          pw.Text('Notas: ${c['notas']}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      ],
+                    ),
+                    pw.Text(c['estado'] ?? 'Programada', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                  ],
+                ),
+              )).toList(),
             pw.SizedBox(height: 16),
 
             // Section 4: Plan de Tratamiento y Presupuesto
             pw.Text('PLAN DE TRATAMIENTOS Y ESTADO DE CUENTA (QUETZALES Q):', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
             pw.SizedBox(height: 6),
             if (tratamientos.isEmpty)
-              pw.Text('Sin tratamientos activos asignados.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700))
-            else
-              for (var t in tratamientos)
-                pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 6),
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
-                    borderRadius: pw.BorderRadius.circular(6),
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(t['nombre'] ?? t['concepto'] ?? 'Tratamiento', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                          pw.Text('Estado: ${t['estado'] ?? "En Proceso"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                        ],
-                      ),
-                      pw.Text('Q ${(t['precio'] ?? t['costo'] ?? 0.0).toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                    ],
-                  ),
+              pw.Text('Sin tratamientos activos asignados.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            if (tratamientos.isNotEmpty)
+              ...tratamientos.map((t) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 6),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                  borderRadius: pw.BorderRadius.circular(6),
                 ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(t['nombre'] ?? t['concepto'] ?? 'Tratamiento', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Estado: ${t['estado'] ?? "En Proceso"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      ],
+                    ),
+                    pw.Text('Q ${(t['precio'] ?? t['costo'] ?? 0.0).toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  ],
+                ),
+              )).toList(),
 
             pw.SizedBox(height: 20),
             pw.Divider(),
