@@ -23,6 +23,22 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
   Paciente? _pacienteSeleccionado;
   bool _loadingPacientes = true;
 
+  // Nuevos campos para Consulta Clinica Integral
+  String _tipoConsulta = 'Consulta General';
+  final List<String> _tiposConsulta = [
+    'Consulta General',
+    'Limpieza Dental',
+    'Ortodoncia',
+    'Cirugia',
+    'Blanqueamiento',
+    'Endodoncia',
+    'ATM / Dolor Articular'
+  ];
+
+  final TextEditingController _motivoCtrl = TextEditingController();
+  final TextEditingController _diagnosticoGeneralCtrl = TextEditingController();
+
+  // Variables específicas para ATM
   double _dolorLevel = 3.0; // 0 a 10
   bool _bloqueoMandibula = false;
   bool _chasquidosDolorosos = true;
@@ -38,6 +54,13 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
     _cargarPacientes();
   }
 
+  @override
+  void dispose() {
+    _motivoCtrl.dispose();
+    _diagnosticoGeneralCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarPacientes() async {
     setState(() => _loadingPacientes = true);
     try {
@@ -50,27 +73,16 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
           _pacienteSeleccionado = widget.pacienteInicial;
         } else if (list.isNotEmpty) {
           _pacienteSeleccionado = list.first;
-        } else {
-          _pacienteSeleccionado = Paciente(
-            id: 'paciente_general',
-            nombre: 'Paciente',
-            apellido: 'General',
-            email: 'paciente@clinic.com',
-            telefono: '+50255551234',
-            fechaNacimiento: DateTime(1995, 1, 1),
-            genero: 'No especificado',
-            direccion: 'Guatemala',
-          );
         }
       });
     } catch (e) {
-      debugPrint('Error al cargar pacientes en Evaluación Rápida: $e');
+      debugPrint('Error al cargar pacientes en Consulta Clínica: $e');
     } finally {
       if (mounted) setState(() => _loadingPacientes = false);
     }
   }
 
-  int _calcularPuntaje() {
+  int _calcularPuntajeATM() {
     int score = (_dolorLevel * 5).toInt(); // 0 a 50 pts
     if (_bloqueoMandibula) score += 20;
     if (_chasquidosDolorosos) score += 10;
@@ -79,20 +91,31 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
     return score.clamp(0, 100);
   }
 
-  String _obtenerDiagnostico(int score) {
-    if (score < 30) {
-      return 'Riesgo ATM Bajo • Control Preventivo';
-    } else if (score < 65) {
-      return 'Riesgo ATM Moderado • Férula de Descarga Indicada';
+  String _obtenerDiagnostico() {
+    if (_tipoConsulta == 'ATM / Dolor Articular') {
+      final score = _calcularPuntajeATM();
+      if (score < 30) {
+        return 'Riesgo ATM Bajo • Control Preventivo';
+      } else if (score < 65) {
+        return 'Riesgo ATM Moderado • Férula de Descarga Indicada';
+      } else {
+        return 'Riesgo ATM Alto / Agudo • Intervención Especialista Recomendada';
+      }
     } else {
-      return 'Riesgo ATM Alto / Agudo • Intervención Especialista Recomendada';
+      return _diagnosticoGeneralCtrl.text.isNotEmpty 
+          ? _diagnosticoGeneralCtrl.text 
+          : 'Consulta de evaluación de $_tipoConsulta completada.';
     }
   }
 
-  Color _obtenerColorRiesgo(int score) {
-    if (score < 30) return AppColors.success;
-    if (score < 65) return AppColors.warning;
-    return AppColors.error;
+  Color _obtenerColorRiesgo() {
+    if (_tipoConsulta == 'ATM / Dolor Articular') {
+      final score = _calcularPuntajeATM();
+      if (score < 30) return AppColors.success;
+      if (score < 65) return AppColors.warning;
+      return AppColors.error;
+    }
+    return AppColors.primary; // Color normal para consultas generales
   }
 
   InputDecoration _inputDecoration(String label) {
@@ -115,20 +138,34 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    final score = _calcularPuntaje();
-    final diagnostico = _obtenerDiagnostico(score);
-    final severityColor = _obtenerColorRiesgo(score);
+    if (_motivoCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa el motivo de la consulta'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
+    setState(() => _isLoading = true);
+    final diagnostico = _obtenerDiagnostico();
+    final severityColor = _obtenerColorRiesgo();
     final pacienteNombre = '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}';
 
-    final respuestasMap = {
-      'nivel_dolor': _dolorLevel.toInt(),
-      'bloqueo_mandibula': _bloqueoMandibula ? 'Sí' : 'No',
-      'chasquidos_dolorosos': _chasquidosDolorosos ? 'Sí' : 'No',
-      'bruxismo_nocturno': _bruxismoNocturno ? 'Sí' : 'No',
-      'cefalea_cervical': _cefaleaCervical ? 'Sí' : 'No',
+    Map<String, dynamic> respuestasMap = {
+      'tipo_consulta': _tipoConsulta,
+      'motivo': _motivoCtrl.text,
+      'diagnostico_general': _diagnosticoGeneralCtrl.text,
     };
+
+    if (_tipoConsulta == 'ATM / Dolor Articular') {
+      respuestasMap.addAll({
+        'nivel_dolor': _dolorLevel.toInt(),
+        'bloqueo_mandibula': _bloqueoMandibula ? 'Sí' : 'No',
+        'chasquidos_dolorosos': _chasquidosDolorosos ? 'Sí' : 'No',
+        'bruxismo_nocturno': _bruxismoNocturno ? 'Sí' : 'No',
+        'cefalea_cervical': _cefaleaCervical ? 'Sí' : 'No',
+        'puntaje_atm': _calcularPuntajeATM(),
+      });
+    }
 
     final supabaseService = SupabaseService();
     final evaluacionData = {
@@ -137,7 +174,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
       'pacienteId': _pacienteSeleccionado!.id,
       'paciente_nombre': pacienteNombre,
       'fecha': DateTime.now().toIso8601String(),
-      'puntuacion': score,
+      'puntuacion': _tipoConsulta == 'ATM / Dolor Articular' ? _calcularPuntajeATM() : 0,
       'diagnostico': diagnostico,
       'respuestas': respuestasMap,
     };
@@ -145,7 +182,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
     try {
       await supabaseService.guardarEvaluacion(evaluacionData);
     } catch (e) {
-      debugPrint('Error al guardar evaluación rápida: $e');
+      debugPrint('Error al guardar consulta: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -170,14 +207,16 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                score >= 65 ? Icons.warning_amber_rounded : Icons.health_and_safety_outlined,
+                _tipoConsulta == 'ATM / Dolor Articular' && _calcularPuntajeATM() >= 65 
+                    ? Icons.warning_amber_rounded 
+                    : Icons.check_circle_outline_rounded,
                 size: 52,
                 color: severityColor,
               ),
             ),
             const SizedBox(height: 18),
             const Text(
-              'Evaluación Rápida',
+              'Consulta Finalizada',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -189,22 +228,6 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
             Text(
               'Paciente: $pacienteNombre',
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: severityColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Índice de Riesgo: $score / 100',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: severityColor,
-                ),
-              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -218,43 +241,24 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'El registro clínico se ha sincronizado en el historial 360° del paciente en Supabase.',
+              'La información de la consulta se ha guardado en el expediente clínico del paciente.',
               style: TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
 
-            // Botón Exportar PDF
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf, size: 18, color: AppColors.primary),
-                label: const Text(
-                  'Exportar Informe PDF Rizo',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
-                ),
-                onPressed: () => _generarPDFCompartir(score, diagnostico, respuestasMap),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Botón Derivar a Test de Fonseca
+            // Botón Crear Plan de Tratamiento y Presupuesto
             SizedBox(
               width: double.infinity,
               height: 44,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
-                label: const Text('Derivar a Test de Fonseca', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                icon: const Icon(Icons.medical_services_outlined, size: 18, color: Colors.white),
+                label: const Text('Iniciar Plan de Tratamiento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 onPressed: () {
                   Navigator.pop(ctx);
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const FonsecaTestScreen()),
+                    MaterialPageRoute(builder: (context) => TreatmentsScreen(paciente: _pacienteSeleccionado)),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -266,27 +270,27 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Botón Crear Plan de Tratamiento y Presupuesto
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.medical_services_outlined, size: 18, color: Colors.white),
-                label: const Text('Crear Plan de Tratamiento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => TreatmentsScreen(paciente: _pacienteSeleccionado)),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            if (_tipoConsulta == 'ATM / Dolor Articular')
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.assignment_outlined, size: 18, color: AppColors.primary),
+                  label: const Text('Derivar a Test de Fonseca', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const FonsecaTestScreen()),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
               ),
-            ),
+
             const SizedBox(height: 8),
 
             // Botón Volver al Dashboard
@@ -295,7 +299,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: const Text('Volver al Inicio', style: TextStyle(color: AppColors.textLight, fontSize: 13)),
+              child: const Text('Cerrar Consulta', style: TextStyle(color: AppColors.textLight, fontSize: 13)),
             ),
           ],
         ),
@@ -303,87 +307,8 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
     );
   }
 
-  Future<void> _generarPDFCompartir(int score, String diagnostico, Map<String, dynamic> respuestas) async {
-    final pdf = pw.Document();
-    final fechaStr = DateTime.now().toString().split(' ')[0];
-    final pacienteNombre = _pacienteSeleccionado != null
-        ? '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}'
-        : 'Paciente General';
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(28),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('The Clinical Sanctuary • Evaluación Rápida', style: const pw.TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    pw.Text('Fecha: $fechaStr', style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.Divider(),
-                pw.SizedBox(height: 16),
-                pw.Text('RESULTADO DE EVALUACIÓN CLÍNICA RÁPIDA', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 8),
-                pw.Text('Paciente: $pacienteNombre', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 12),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(16),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.grey100,
-                    borderRadius: pw.BorderRadius.circular(10),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Puntuación de Riesgo: $score / 100 Puntos', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 6),
-                      pw.Text('Diagnóstico Presuntivo: $diagnostico', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text('Síntomas Evaluados en Consulta:'),
-                pw.SizedBox(height: 10),
-                pw.Text('1. Nivel de Dolor Registrado (0-10): ${respuestas['nivel_dolor']} / 10'),
-                pw.Text('2. Bloqueo de Mandíbula: ${respuestas['bloqueo_mandibula']}'),
-                pw.Text('3. Chasquidos Dolorosos Articulación: ${respuestas['chasquidos_dolorosos']}'),
-                pw.Text('4. Bruxismo Nocturno (Apretamiento): ${respuestas['bruxismo_nocturno']}'),
-                pw.Text('5. Cefalea / Dolor Cervical Frecuente: ${respuestas['cefalea_cervical']}'),
-                pw.Spacer(),
-                pw.Divider(),
-                pw.Center(
-                  child: pw.Text('Rizo Dental Sanctuary • Expediente Clínico 360°', style: const pw.TextStyle(fontSize: 10)),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'rizo_evaluacion_rapida_$fechaStr.pdf',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final int puntajeActual = _calcularPuntaje();
-    final Color colorActual = _obtenerColorRiesgo(puntajeActual);
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -400,7 +325,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
               height: 32,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.speed,
+                Icons.medical_information,
                 color: AppColors.primary,
               ),
             ),
@@ -418,7 +343,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                   ),
                 ),
                 Text(
-                  'Evaluación Rápida',
+                  'Consulta Clínica Integrada',
                   style: TextStyle(
                     fontSize: 10,
                     color: AppColors.textLight,
@@ -437,7 +362,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Patient Selection Top Card (Precision Layering)
+                    // Patient Selection
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -455,7 +380,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Paciente a Evaluar:',
+                            'Paciente en Consulta:',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
                           ),
                           const SizedBox(height: 8),
@@ -478,137 +403,152 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Header Card
+                    // Tipo de Consulta
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.shadowSoft,
-                            blurRadius: 24,
-                            offset: Offset(0, 8),
-                          ),
+                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 24, offset: Offset(0, 8)),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Evaluación Rápida',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.onSurface,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: colorActual.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Riesgo: $puntajeActual%',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorActual,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
                           const Text(
-                            'Evaluación rápida de 5 factores clave durante la consulta dental.',
-                            style: TextStyle(fontSize: 13, color: AppColors.textLight),
+                            'Tipo de Consulta Clínica:',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: _tipoConsulta,
+                            decoration: _inputDecoration('Especialidad o Área'),
+                            dropdownColor: AppColors.surfaceContainerLowest,
+                            items: _tiposConsulta.map((t) {
+                              return DropdownMenuItem<String>(
+                                value: t,
+                                child: Text(t),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _tipoConsulta = val);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Motivo Principal (Dolor, Síntomas, Revisión):',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _motivoCtrl,
+                            maxLines: 3,
+                            decoration: _inputDecoration('Ej. Paciente refiere dolor al masticar en cuadrante inferior derecho...'),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Diagnóstico / Hallazgos Clínicos:',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _diagnosticoGeneralCtrl,
+                            maxLines: 3,
+                            decoration: _inputDecoration('Ej. Presencia de caries profunda en pieza 46, se recomienda endodoncia...'),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
 
-                    // Factor 1: Pain Level Slider
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [
-                          BoxShadow(color: AppColors.shadowSoft, blurRadius: 16, offset: Offset(0, 4)),
-                        ],
+                    // Sección condicional para Evaluación ATM
+                    if (_tipoConsulta == 'ATM / Dolor Articular') ...[
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8, bottom: 12, top: 10),
+                        child: Text(
+                          'Evaluación Específica ATM',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                '1. Nivel de dolor articular / muscular',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface),
-                              ),
-                              Text(
-                                '${_dolorLevel.toInt()} / 10',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Slider(
-                            value: _dolorLevel,
-                            min: 0,
-                            max: 10,
-                            divisions: 10,
-                            activeColor: AppColors.primary,
-                            inactiveColor: AppColors.surfaceContainerLow,
-                            onChanged: (val) => setState(() => _dolorLevel = val),
-                          ),
-                        ],
+                      
+                      // Factor 1: Pain Level Slider
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(color: AppColors.shadowSoft, blurRadius: 16, offset: Offset(0, 4)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  '1. Nivel de dolor articular / muscular',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface),
+                                ),
+                                Text(
+                                  '${_dolorLevel.toInt()} / 10',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Slider(
+                              value: _dolorLevel,
+                              min: 0,
+                              max: 10,
+                              divisions: 10,
+                              activeColor: AppColors.primary,
+                              inactiveColor: AppColors.surfaceContainerLow,
+                              onChanged: (val) => setState(() => _dolorLevel = val),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
+                      const SizedBox(height: 14),
 
-                    // Factor 2: Bloqueo Mandíbula
-                    _buildClinicalSwitch(
-                      title: '2. ¿Ha experimentado bloqueo de mandíbula?',
-                      subtitle: 'Imposibilidad temporal para abrir o cerrar la boca por completo.',
-                      value: _bloqueoMandibula,
-                      onChanged: (v) => setState(() => _bloqueoMandibula = v),
-                    ),
-                    const SizedBox(height: 14),
+                      // Factor 2: Bloqueo Mandíbula
+                      _buildClinicalSwitch(
+                        title: '2. ¿Ha experimentado bloqueo de mandíbula?',
+                        subtitle: 'Imposibilidad temporal para abrir o cerrar la boca por completo.',
+                        value: _bloqueoMandibula,
+                        onChanged: (v) => setState(() => _bloqueoMandibula = v),
+                      ),
+                      const SizedBox(height: 14),
 
-                    // Factor 3: Chasquidos Dolorosos
-                    _buildClinicalSwitch(
-                      title: '3. ¿Siente chasquidos (clicks) dolorosos?',
-                      subtitle: 'Ruidos articulares acompañados de molestia al masticar.',
-                      value: _chasquidosDolorosos,
-                      onChanged: (v) => setState(() => _chasquidosDolorosos = v),
-                    ),
-                    const SizedBox(height: 14),
+                      // Factor 3: Chasquidos Dolorosos
+                      _buildClinicalSwitch(
+                        title: '3. ¿Siente chasquidos (clicks) dolorosos?',
+                        subtitle: 'Ruidos articulares acompañados de molestia al masticar.',
+                        value: _chasquidosDolorosos,
+                        onChanged: (v) => setState(() => _chasquidosDolorosos = v),
+                      ),
+                      const SizedBox(height: 14),
 
-                    // Factor 4: Bruxismo
-                    _buildClinicalSwitch(
-                      title: '4. ¿Identifica bruxismo (apretamiento)?',
-                      subtitle: 'Rechinamiento nocturno o tensión mandibular matutina.',
-                      value: _bruxismoNocturno,
-                      onChanged: (v) => setState(() => _bruxismoNocturno = v),
-                    ),
-                    const SizedBox(height: 14),
+                      // Factor 4: Bruxismo
+                      _buildClinicalSwitch(
+                        title: '4. ¿Identifica bruxismo (apretamiento)?',
+                        subtitle: 'Rechinamiento nocturno o tensión mandibular matutina.',
+                        value: _bruxismoNocturno,
+                        onChanged: (v) => setState(() => _bruxismoNocturno = v),
+                      ),
+                      const SizedBox(height: 14),
 
-                    // Factor 5: Cefalea / Cervical
-                    _buildClinicalSwitch(
-                      title: '5. ¿Sufre cefaleas o dolor en el cuello?',
-                      subtitle: 'Tensión muscular referida hacia la cabeza o zona cervical.',
-                      value: _cefaleaCervical,
-                      onChanged: (v) => setState(() => _cefaleaCervical = v),
-                    ),
-                    const SizedBox(height: 28),
+                      // Factor 5: Cefalea / Cervical
+                      _buildClinicalSwitch(
+                        title: '5. ¿Sufre cefaleas o dolor en el cuello?',
+                        subtitle: 'Tensión muscular referida hacia la cabeza o zona cervical.',
+                        value: _cefaleaCervical,
+                        onChanged: (v) => setState(() => _cefaleaCervical = v),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
 
                     // Submit Button (Linear Gradient & Scale Animation)
                     GestureDetector(
@@ -637,7 +577,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                           ),
                           child: ElevatedButton.icon(
                             onPressed: _isLoading ? null : _guardarYGenerarReporte,
-                            icon: const Icon(Icons.assessment, color: Colors.white, size: 22),
+                            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 22),
                             label: _isLoading
                                 ? const SizedBox(
                                     width: 22,
@@ -645,7 +585,7 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                   )
                                 : const Text(
-                                    'Guardar y Generar Diagnóstico',
+                                    'Finalizar Consulta',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

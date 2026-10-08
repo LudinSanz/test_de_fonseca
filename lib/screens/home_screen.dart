@@ -305,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.speed_outlined, color: AppColors.primary),
                   ),
                   title: const Text(
-                    'Evaluación Rápida ATM',
+                    'Consulta Clínica',
                     style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
                   ),
                   subtitle: const Text(
@@ -844,7 +844,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             icon: const Icon(Icons.speed, size: 18, color: AppColors.primary),
                             label: const Text(
-                              'Evaluación Rápida',
+                              'Consulta Clínica',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

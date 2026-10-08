@@ -443,7 +443,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               children: [
                 _chipAccion(Icons.calendar_today_rounded, 'Cita', () => _enviarPlantilla(p, 'cita'), Colors.blue),
                 _chipAccion(Icons.medication_outlined, 'Receta', () => _enviarPlantilla(p, 'receta'), Colors.green),
-                _chipAccion(Icons.psychology_outlined, 'Evaluación', () => _enviarPlantilla(p, 'evaluacion'), Colors.orange),
+                _chipAccion(Icons.psychology_outlined, 'Consulta', () => _enviarPlantilla(p, 'evaluacion'), Colors.orange),
                 _chipAccion(Icons.quiz_outlined, 'Test Fonseca', () => _enviarPlantilla(p, 'fonseca'), Colors.purple),
                 _chipAccion(Icons.notifications_outlined, 'Recordatorio', () => _enviarPlantilla(p, 'recordatorio'), Colors.amber),
                 _chipAccion(Icons.local_hospital_outlined, 'Postop', () => _enviarPlantilla(p, 'postop'), Colors.red),
@@ -553,7 +553,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         }
         break;
       case 'evaluacion':
-        msg = '¡Hola $nombre! 👋\n\nEl Dr. Solís le solicita responder una *evaluación rápida* de su estado de salud bucal.\n\n'
+        msg = '¡Hola $nombre! 👋\n\nEl Dr. Solís le solicita responder una *consulta clínica* de su estado de salud bucal.\n\n'
             'Por favor contáctenos al *+502 5981-6632* o visite la clínica para realizarla.\n\n'
             '_Rizo Dental_ 🦷';
         break;

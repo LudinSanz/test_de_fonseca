@@ -587,7 +587,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Evaluaciones ATM: ${_evaluaciones.length} • Recetas: ${_recetas.length} • Citas: ${_citas.length}',
+                          'Consultas Médicas: ${_evaluaciones.length} • Recetas: ${_recetas.length} • Citas: ${_citas.length}',
                           style: const TextStyle(fontSize: 12, color: AppColors.textLight),
                         ),
                       ],
@@ -625,17 +625,17 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
     );
   }
 
-  // TAB 2: EVALUACIONES ATM
+  // TAB 2: CONSULTAS CLÍNICAS
   Widget _buildEvaluacionesTab() {
     if (_evaluaciones.isEmpty) {
-      return _buildEmptyState('No hay evaluaciones de Fonseca (ATM) registradas para este paciente.');
+      return _buildEmptyState('No hay consultas clínicas registradas para este paciente.');
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       itemCount: _evaluaciones.length,
       itemBuilder: (context, index) {
         final eval = _evaluaciones[index];
-        final String diagnostico = eval['diagnostico'] ?? 'Diagnóstico de Fonseca';
+        final String diagnostico = eval['diagnostico'] ?? 'Diagnóstico de Consulta';
         final int score = eval['puntuacion'] ?? 0;
         final String fecha = eval['fecha'] != null
             ? eval['fecha'].toString().split('T')[0]
