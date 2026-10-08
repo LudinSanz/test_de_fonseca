@@ -543,12 +543,16 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
         const SizedBox(height: 14),
 
         ..._odontogramState.entries.where((e) => e.value["tratamiento"] != "" && e.value["tratamiento"] != "Ninguno").map((e) {
+          final String evo = e.value["evolucion"] ?? "Evaluaci�n";
           return _buildTratamientoCard(
             nombre: "${e.value["tratamiento"]} (Pieza ${e.key})",
             estado: e.value["estado"] as String,
             estadoColor: e.value["color"] as Color,
             precioGtq: (e.value["precio_gtq"] as num).toDouble(),
-            etapas: ["Evaluaci�n", "Presupuesto"],
+            etapas: ["Evaluaci�n", "Presupuesto", "En Proceso", "Terminado"].map((stage) {
+                if (stage == evo) return "$stage ?";
+                return stage;
+            }).toList(),
           );
         }).toList(),
       ],

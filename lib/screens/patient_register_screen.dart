@@ -26,7 +26,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
   String _genero = 'Femenino';
 
   // Step 2: Antecedentes Odontológicos & ATM
-  String _motivoConsulta = 'Dolor en la mandíbula / Apretamiento dental';
+  String _motivoConsulta = 'Chequeo Odontológico General';
   bool _tieneBruxismo = true;
   bool _tieneChasquido = false;
   bool _tieneDolorCabeza = true;
@@ -545,16 +545,15 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                       value: _codigoPais,
                       icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
                       items: const [
-              DropdownMenuItem(value: "Chequeo Odontol�gico General", child: Text("Chequeo Odontol�gico General")),
-              DropdownMenuItem(value: "Limpieza Dental (Profilaxis)", child: Text("Limpieza Dental (Profilaxis)")),
-              DropdownMenuItem(value: "Blanqueamiento Dental", child: Text("Blanqueamiento Dental")),
-              DropdownMenuItem(value: "Ortodoncia (Frenos)", child: Text("Ortodoncia (Frenos)")),
-              DropdownMenuItem(value: "Cirug�a Maxilofacial / Extracci�n", child: Text("Cirug�a / Extracci�n")),
-              DropdownMenuItem(value: "Endodoncia", child: Text("Endodoncia")),
-              DropdownMenuItem(value: "Dolor en la mand�bula / ATM", child: Text("Dolor en la mand�bula / ATM")),
-              DropdownMenuItem(value: "Chasquidos o ruidos al masticar", child: Text("Chasquidos o ruidos al masticar")),
-              DropdownMenuItem(value: "Cefaleas frecuentes y dolor de cuello", child: Text("Cefaleas y dolor de cuello")),
-            ],
+                        DropdownMenuItem(value: "+502", child: Text("???? +502", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+503", child: Text("???? +503", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+504", child: Text("???? +504", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+505", child: Text("???? +505", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+506", child: Text("???? +506", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+507", child: Text("???? +507", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+52", child: Text("???? +52", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+1", child: Text("???? +1", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                      ],
                       onChanged: (val) {
                         if (val != null) setState(() => _codigoPais = val);
                       },
@@ -707,24 +706,16 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
           DropdownButtonFormField<String>(
             value: _motivoConsulta,
             decoration: _inputDecoration('Motivo', Icons.medical_services_outlined),
-            dropdownColor: AppColors.surfaceContainerLowest,
             items: const [
-              DropdownMenuItem(
-                value: 'Dolor en la mandíbula / Apretamiento dental',
-                child: Text('Dolor / Apretamiento mandibular'),
-              ),
-              DropdownMenuItem(
-                value: 'Chasquidos o ruidos al masticar',
-                child: Text('Chasquidos / Ruidos articulación'),
-              ),
-              DropdownMenuItem(
-                value: 'Cefaleas frecuentes y dolor de cuello',
-                child: Text('Cefaleas y dolor de cuello'),
-              ),
-              DropdownMenuItem(
-                value: 'Chequeo Odontológico General',
-                child: Text('Chequeo Odontológico General'),
-              ),
+              DropdownMenuItem(value: "Chequeo Odontol�gico General", child: Text("Chequeo Odontol�gico General")),
+              DropdownMenuItem(value: "Limpieza Dental (Profilaxis)", child: Text("Limpieza Dental (Profilaxis)")),
+              DropdownMenuItem(value: "Blanqueamiento Dental", child: Text("Blanqueamiento Dental")),
+              DropdownMenuItem(value: "Ortodoncia (Frenos)", child: Text("Ortodoncia (Frenos)")),
+              DropdownMenuItem(value: "Cirug�a Maxilofacial / Extracci�n", child: Text("Cirug�a / Extracci�n")),
+              DropdownMenuItem(value: "Endodoncia", child: Text("Endodoncia")),
+              DropdownMenuItem(value: "Dolor en la mand�bula / ATM", child: Text("Dolor en la mand�bula / ATM")),
+              DropdownMenuItem(value: "Chasquidos o ruidos al masticar", child: Text("Chasquidos o ruidos al masticar")),
+              DropdownMenuItem(value: "Cefaleas frecuentes y dolor de cuello", child: Text("Cefaleas y dolor de cuello")),
             ],
             onChanged: (val) {
               if (val != null) setState(() => _motivoConsulta = val);
