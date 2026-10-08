@@ -515,7 +515,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
               BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6)),
             ],
           ),
-          child: const Column(
+          child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -545,9 +545,9 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
         ..._odontogramState.entries.where((e) => e.value["tratamiento"] != "" && e.value["tratamiento"] != "Ninguno").map((e) {
           return _buildTratamientoCard(
             nombre: "${e.value["tratamiento"]} (Pieza ${e.key})",
-            estado: e.value["estado"],
-            estadoColor: e.value["color"],
-            precioGtq: e.value["precio_gtq"],
+            estado: e.value["estado"] as String,
+            estadoColor: e.value["color"] as Color,
+            precioGtq: (e.value["precio_gtq"] as num).toDouble(),
             etapas: ["Evaluaci�n", "Presupuesto"],
           );
         }).toList(),
