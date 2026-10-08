@@ -148,7 +148,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   // UI PRINCIPAL
   // ============================================================
   @override
-  Widget build(BuildContext context) {
+    Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
@@ -158,35 +158,49 @@ class _MessagesScreenState extends State<MessagesScreen> {
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Centro de Mensajes', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('WhatsApp Clínica', style: TextStyle(fontSize: 11, color: Colors.white70)),
+            Text("Centro de Mensajes", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text("WhatsApp Cl�nica", style: TextStyle(fontSize: 11, color: Colors.white70)),
           ],
         ),
+        leading: _pacienteSeleccionado != null && MediaQuery.of(context).size.width < 600
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _pacienteSeleccionado = null),
+              )
+            : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () { setState(() => _loading = true); _cargarPacientes(); },
-            tooltip: 'Actualizar',
+            tooltip: "Actualizar",
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Row(
-              children: [
-                // ---- LISTA DE CONVERSACIONES ----
-                _buildListaConversaciones(),
-                // ---- PANEL DE CHAT ----
-                Expanded(child: _pacienteSeleccionado == null ? _buildBienvenida() : _buildChat(_pacienteSeleccionado!)),
-              ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
+                if (isMobile) {
+                  return _pacienteSeleccionado == null
+                      ? _buildListaConversaciones(isMobile: true)
+                      : _buildChat(_pacienteSeleccionado!);
+                }
+                return Row(
+                  children: [
+                    _buildListaConversaciones(isMobile: false),
+                    Expanded(child: _pacienteSeleccionado == null ? _buildBienvenida() : _buildChat(_pacienteSeleccionado!)),
+                  ],
+                );
+              },
             ),
     );
   }
 
   // ---- LISTA DE PACIENTES / CONVERSACIONES ----
-  Widget _buildListaConversaciones() {
+  Widget _buildListaConversaciones({bool isMobile = false}) {
     return Container(
-      width: 280,
+      width: isMobile ? double.infinity : 320,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(right: BorderSide(color: Colors.grey.shade200)),

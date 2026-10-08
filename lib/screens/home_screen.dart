@@ -472,7 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Text(
-                  'The Clinical Sanctuary',
+                  'Rizo Dental',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -730,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Main Assessment Action Module (Clinical Sanctuary Signature Card)
+              // Main Assessment Action Module (Ficha Principal)
               Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(

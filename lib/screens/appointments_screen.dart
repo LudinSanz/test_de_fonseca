@@ -268,10 +268,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
     final buffer = StringBuffer();
     if (esReprogramacion) {
-      buffer.writeln('🔄 *CITA REPROGRAMADA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('🔄 *CITA REPROGRAMADA - Rizo Dental*');
       buffer.writeln('Hola $nombre, tu cita ha sido reprogramada exitosamente.');
     } else {
-      buffer.writeln('📅 *CONFIRMACIÓN DE CITA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('📅 *CONFIRMACIÓN DE CITA - Rizo Dental*');
       buffer.writeln('Hola $nombre, tu cita odontológica fue agendada exitosamente.');
     }
     buffer.writeln('\n• Motivo: $motivo');

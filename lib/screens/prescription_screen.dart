@@ -219,7 +219,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       final tel = _pacienteSeleccionado!.telefono;
       final nombre = '${_pacienteSeleccionado!.nombre} ${_pacienteSeleccionado!.apellido}';
       final buffer = StringBuffer();
-      buffer.writeln('📋 *RECETA MÉDICA - RIZO DENTAL SANCTUARY*');
+      buffer.writeln('📋 *RECETA MÉDICA - Rizo Dental*');
       buffer.writeln('Paciente: $nombre');
       buffer.writeln('Fecha: ${DateTime.now().toString().split(' ')[0]}');
       buffer.writeln('\n*Medicamentos Prescritos:*');

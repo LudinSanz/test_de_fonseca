@@ -20,40 +20,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
 
   // Selected Tooth State for Interactive Odontogram
   int _selectedToothNumber = 16;
-  final Map<int, Map<String, dynamic>> _odontogramState = {
-    16: {
-      'estado': 'Pendiente',
-      'color': AppColors.warning,
-      'diagnostico': 'Caries Oclusal Grado 2',
-      'tratamiento': 'Restauración Fotocurable Resina',
-      'precio_gtq': 600.0,
-      'notas': 'Requiere aislamiento absoluto'
-    },
-    21: {
-      'estado': 'Problema',
-      'color': AppColors.error,
-      'diagnostico': 'Fractura Coronaria por Trauma',
-      'tratamiento': 'Endodoncia + Corona Porcelana',
-      'precio_gtq': 2500.0,
-      'notas': 'Sensibilidad a la percusión'
-    },
-    11: {
-      'estado': 'Tratado',
-      'color': AppColors.success,
-      'diagnostico': 'Blanqueamiento LED Sanctuary',
-      'tratamiento': 'Profilaxis + Blanqueamiento',
-      'precio_gtq': 1500.0,
-      'notas': 'Tratamiento completado con éxito'
-    },
-    46: {
-      'estado': 'Sano',
-      'color': AppColors.surfaceContainerLow,
-      'diagnostico': 'Pieza Sana',
-      'tratamiento': 'Ninguno',
-      'precio_gtq': 0.0,
-      'notas': 'Sin hallazgos patológicos'
-    },
-  };
+  final Map<int, Map<String, dynamic>> _odontogramState = {};
 
   @override
   void initState() {
@@ -89,6 +56,85 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+
+  void _mostrarDialogoEdicionPieza(int toothNum) {
+    final info = _odontogramState[toothNum] ?? {};
+    final estadoCtrl = TextEditingController(text: info["estado"] ?? "Sano");
+    final diagCtrl = TextEditingController(text: info["diagnostico"] ?? "");
+    final tratCtrl = TextEditingController(text: info["tratamiento"] ?? "");
+    final precioCtrl = TextEditingController(text: (info["precio_gtq"] ?? 0.0).toString());
+    final notasCtrl = TextEditingController(text: info["notas"] ?? "");
+
+    String selectedEstado = info["estado"] ?? "Sano";
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text("Editar Pieza #$toothNum", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+          content: SingleChildScrollView(
+            child: StatefulBuilder(
+              builder: (ctx, setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedEstado,
+                      decoration: const InputDecoration(labelText: "Estado"),
+                      items: ["Sano", "Pendiente", "Problema", "Tratado"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedEstado = val);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(controller: diagCtrl, decoration: const InputDecoration(labelText: "Diagn�stico")),
+                    const SizedBox(height: 10),
+                    TextField(controller: tratCtrl, decoration: const InputDecoration(labelText: "Tratamiento a realizar")),
+                    const SizedBox(height: 10),
+                    TextField(controller: precioCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Precio (GTQ)")),
+                    const SizedBox(height: 10),
+                    TextField(controller: notasCtrl, maxLines: 2, decoration: const InputDecoration(labelText: "Notas Cl�nicas")),
+                  ],
+                );
+              }
+            )
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _odontogramState[toothNum] = {
+                    "estado": selectedEstado,
+                    "color": selectedEstado == "Sano" ? AppColors.surfaceContainerLow : selectedEstado == "Pendiente" ? AppColors.warning : selectedEstado == "Problema" ? AppColors.error : AppColors.success,
+                    "diagnostico": diagCtrl.text,
+                    "tratamiento": tratCtrl.text,
+                    "precio_gtq": double.tryParse(precioCtrl.text) ?? 0.0,
+                    "notas": notasCtrl.text,
+                  };
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text("Guardar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  double _calcularTotal() {
+    double total = 0;
+    _odontogramState.forEach((key, value) {
+      if (value["precio_gtq"] != null) {
+        total += value["precio_gtq"];
+      }
+    });
+    return total;
   }
 
   Color _getToothColor(int toothNum) {
@@ -479,7 +525,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                     children: [
                       Text('ESTADO DE CUENTA (GTQ)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
                       SizedBox(height: 4),
-                      Text('Q 4,600.00', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text('Q ${_calcularTotal().toStringAsFixed(2)}', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   Column(
@@ -496,27 +542,15 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
         ),
         const SizedBox(height: 14),
 
-        _buildTratamientoCard(
-          nombre: 'Limpieza Dental Profunda & Profilaxis',
-          estado: 'Completado',
-          estadoColor: AppColors.success,
-          precioGtq: 350.0,
-          etapas: ['Valoración ✓', 'Profilaxis ✓', 'Alta ✓'],
-        ),
-        _buildTratamientoCard(
-          nombre: 'Restauración Fotocurable Resina (Pieza 16)',
-          estado: 'En Proceso',
-          estadoColor: AppColors.warning,
-          precioGtq: 600.0,
-          etapas: ['Valoración ✓', 'Presupuesto ✓', 'Restauración ●', 'Alta ○'],
-        ),
-        _buildTratamientoCard(
-          nombre: 'Evaluación y Diagnóstico de ATM (Fonseca)',
-          estado: 'En Seguimiento',
-          estadoColor: AppColors.primary,
-          precioGtq: 450.0,
-          etapas: ['Test Anamnésico ✓', 'Diagnóstico ✓', 'Placa Miorrelajante ●', 'Control ○'],
-        ),
+        ..._odontogramState.entries.where((e) => e.value["tratamiento"] != "" && e.value["tratamiento"] != "Ninguno").map((e) {
+          return _buildTratamientoCard(
+            nombre: "${e.value["tratamiento"]} (Pieza ${e.key})",
+            estado: e.value["estado"],
+            estadoColor: e.value["color"],
+            precioGtq: e.value["precio_gtq"],
+            etapas: ["Evaluaci�n", "Presupuesto"],
+          );
+        }).toList(),
       ],
     );
   }

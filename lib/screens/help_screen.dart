@@ -138,7 +138,7 @@ class HelpScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               const Center(
-                child: Text('Rizo Dental v2.5 • The Clinical Sanctuary', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                child: Text('Rizo Dental v2.5 • Rizo Dental', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
               ),
             ],
           ),

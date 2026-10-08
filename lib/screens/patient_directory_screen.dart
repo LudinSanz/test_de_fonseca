@@ -449,7 +449,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
 
                   const SizedBox(height: 12),
 
-                  // Tab Bar (Clinical Sanctuary Navigation)
+                  // Tab Bar (Navegaci�n)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(

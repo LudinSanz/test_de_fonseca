@@ -80,7 +80,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('The Clinical Sanctuary • Diagnóstico ATM', style: const pw.TextStyle(fontSize: 12)),
+                        pw.Text('Rizo Dental • Diagnóstico ATM', style: const pw.TextStyle(fontSize: 12)),
                       ],
                     ),
                     pw.Text('Fecha: $fecha', style: const pw.TextStyle(fontSize: 12)),
@@ -119,7 +119,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 pw.Spacer(),
                 pw.Divider(),
                 pw.Center(
-                  child: pw.Text('Rizo Dental Sanctuary • Firma y Sello del Especialista', style: const pw.TextStyle(fontSize: 10)),
+                  child: pw.Text('Rizo Dental • Firma y Sello del Especialista', style: const pw.TextStyle(fontSize: 10)),
                 ),
               ],
             ),

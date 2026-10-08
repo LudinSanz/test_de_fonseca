@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Rizo Dental: "The Clinical Sanctuary" Design System Palette
+  // Rizo Dental: "Rizo Dental" Design System Palette
   static const Color primary = Color(0xFF003F87);
   static const Color primaryContainer = Color(0xFF0056B3);
   static const Color surface = Color(0xFFF8F9FA);

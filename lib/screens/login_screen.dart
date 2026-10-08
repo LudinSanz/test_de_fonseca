@@ -356,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Brand Header: Rizo Dental Logo & Clinical Sanctuary Identity
+                    // Brand Header: Rizo Dental Logo & Identidad Cl�nica
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(16),

@@ -46,7 +46,7 @@ class PdfGenerator {
   }
 
   // -------------------------------------------------------------
-  // 1. GENERAR PDF TEST DE FONSECA (ATM) - RIZO DENTAL SANCTUARY
+  // 1. GENERAR PDF TEST DE FONSECA (ATM) - Rizo Dental
   // -------------------------------------------------------------
   static Future<void> generarPdfFonseca({
     required Paciente paciente,
@@ -99,7 +99,7 @@ class PdfGenerator {
                             ),
                           ),
                           pw.Text(
-                            'The Clinical Sanctuary • Evaluación Anamnésica ATM (Test de Fonseca)',
+                            'Evaluación Anamnésica ATM (Test de Fonseca)',
                             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                           ),
                         ],
@@ -168,12 +168,12 @@ class PdfGenerator {
                     children: [
                       pw.Expanded(
                         child: pw.Text(
-                          '${i + 1}. ${preguntas[i]['pregunta']}',
+                          '${i + 1}. ${preguntas[i]['question']}',
                           style: const pw.TextStyle(fontSize: 9),
                         ),
                       ),
                       pw.Text(
-                        '${preguntas[i]['respuesta']}',
+                        '${preguntas[i]['answer']}',
                         style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor),
                       ),
                     ],
@@ -187,7 +187,7 @@ class PdfGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Doctor tratante: ${doctorInfo?['name'] ?? "Dr. Ludin Solis"} (Colegiado #${doctorInfo?['colegiado'] ?? "98421"})', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                  pw.Text('Rizo Dental Sanctuary • Guatemala GTQ', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                  pw.Text('Rizo Dental • Guatemala GTQ', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                 ],
               ),
             ],
@@ -248,7 +248,7 @@ class PdfGenerator {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('The Clinical Sanctuary • Confirmación Oficial de Cita', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text('Rizo Dental • Confirmación Oficial de Cita', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                         ],
                       ),
                     ],
@@ -283,7 +283,7 @@ class PdfGenerator {
               pw.Spacer(),
               pw.Divider(),
               pw.Center(
-                child: pw.Text('Rizo Dental Sanctuary • Edificio Sixtino II, Zona 10, Guatemala (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                child: pw.Text('Rizo Dental • Edificio Sixtino II, Zona 10, Guatemala (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
               ),
             ],
           );
@@ -350,7 +350,7 @@ class PdfGenerator {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('The Clinical Sanctuary • RECETA MÉDICA ODONTOLÓGICA', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text('Rizo Dental • RECETA MÉDICA ODONTOLÓGICA', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                         ],
                       ),
                     ],
@@ -481,7 +481,7 @@ class PdfGenerator {
                       pw.Text('${doctorInfo?['name'] ?? "Dr. Ludin Solis"} • Colegiado #${doctorInfo?['colegiado'] ?? "COL-98421"}', style: const pw.TextStyle(fontSize: 9)),
                     ],
                   ),
-                  pw.Text('Rizo Dental Sanctuary • Guatemala GTQ (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('Rizo Dental • Guatemala GTQ (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                 ],
               ),
             ],
@@ -545,7 +545,7 @@ class PdfGenerator {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                          pw.Text('The Clinical Sanctuary • Estado de Cuenta & Presupuesto (GTQ)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text('Rizo Dental • Estado de Cuenta & Presupuesto (GTQ)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                         ],
                       ),
                     ],
@@ -639,7 +639,7 @@ class PdfGenerator {
               pw.Spacer(),
               pw.Divider(),
               pw.Center(
-                child: pw.Text('Rizo Dental Sanctuary • Guatemala GTQ • Moneda Oficial Quetzales (Q)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                child: pw.Text('Rizo Dental • Guatemala GTQ • Moneda Oficial Quetzales (Q)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
               ),
             ],
           );
@@ -838,7 +838,7 @@ class PdfGenerator {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Doctor responsable: ${doctorInfo?['name'] ?? "Dr. Ludin Solis"} (Colegiado #${doctorInfo?['colegiado'] ?? "98421"})', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                pw.Text('Rizo Dental Sanctuary • Guatemala GTQ (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.Text('Rizo Dental • Guatemala GTQ (+502 5981-6632)', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
               ],
             ),
           ];
