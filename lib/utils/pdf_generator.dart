@@ -45,6 +45,35 @@ class PdfGenerator {
     }
   }
 
+  static pw.Widget _buildPdfRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 100,
+            child: pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+          ),
+          pw.Expanded(
+            child: pw.Text(value, style: const pw.TextStyle(fontSize: 11)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildPdfDetail(String label, String value) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+        pw.SizedBox(height: 2),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 11)),
+      ],
+    );
+  }
+
   // -------------------------------------------------------------
   // 1. GENERAR PDF TEST DE FONSECA (ATM) - Rizo Dental
   // -------------------------------------------------------------
@@ -242,7 +271,7 @@ class PdfGenerator {
                     pw.Container(
                       width: 65,
                       height: 65,
-                      child: pw.Image(pw.MemoryImage(logoBytes)),
+                      child: pw.Image(logoBytes),
                     ),
                   if (logoBytes != null) pw.SizedBox(width: 16),
                   pw.Expanded(
@@ -316,8 +345,8 @@ class PdfGenerator {
       ),
     );
 
-    await _saveAndLaunchPdf(
-      pdf,
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
       filename: 'evaluacion_${paciente.nombre.replaceAll(' ', '_')}.pdf',
     );
   }
