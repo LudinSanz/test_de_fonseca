@@ -203,6 +203,125 @@ class PdfGenerator {
   }
 
   // -------------------------------------------------------------
+    // 1.5. GENERAR PDF EVALUACIÓN CLÍNICA (Rizo Dental)
+  // -------------------------------------------------------------
+  static Future<void> generarPdfEvaluacionClinica({
+    required Paciente paciente,
+    required Map<String, dynamic> evaluacion,
+    required Map<String, dynamic>? doctorInfo,
+  }) async {
+    final pdf = pw.Document();
+
+    final logoBytes = await _loadLogo();
+    final primaryColor = PdfColor.fromHex('#00BFA5'); // Rizo Dental Primary Color
+    final headerBgColor = PdfColor.fromHex('#E0F2F1');
+
+    final respuestas = evaluacion['respuestas'] ?? {};
+    final motivo = respuestas['motivo'] ?? 'Sin motivo registrado';
+    final tipoConsulta = respuestas['tipo_consulta'] ?? 'Consulta General';
+    final diagnosticoGeneral = respuestas['diagnostico_general'] ?? '';
+    final fecha = evaluacion['fecha']?.toString().split('T')[0] ?? 'Sin fecha';
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            // HEADER SECTION
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: headerBgColor,
+                borderRadius: pw.BorderRadius.circular(12),
+              ),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  if (logoBytes != null)
+                    pw.Container(
+                      width: 65,
+                      height: 65,
+                      child: pw.Image(pw.MemoryImage(logoBytes)),
+                    ),
+                  if (logoBytes != null) pw.SizedBox(width: 16),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                        pw.Text('Reporte de Evaluación Clínica', style: const pw.TextStyle(fontSize: 14, color: PdfColors.black)),
+                      ],
+                    ),
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('Fecha: ${fecha}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 24),
+
+            // PATIENT INFO SECTION
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('DATOS DEL PACIENTE', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  pw.Divider(color: PdfColors.grey300),
+                  pw.SizedBox(height: 6),
+                  _buildPdfRow('Nombre:', '${paciente.nombre} ${paciente.apellido}'),
+                  _buildPdfRow('Teléfono:', paciente.telefono),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 24),
+
+            // CLINICAL INFO SECTION
+            pw.Text('DETALLES DE LA EVALUACIÓN', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+            pw.Divider(color: PdfColors.grey300),
+            pw.SizedBox(height: 12),
+
+            _buildPdfDetail('Tipo de Consulta:', tipoConsulta),
+            pw.SizedBox(height: 10),
+            _buildPdfDetail('Motivo de la Visita:', motivo),
+            pw.SizedBox(height: 10),
+            
+            if (diagnosticoGeneral.isNotEmpty)
+              _buildPdfDetail('Diagnóstico / Notas Clínicas:', diagnosticoGeneral),
+            
+            if (tipoConsulta == 'ATM / Dolor Articular') ...[
+              pw.SizedBox(height: 16),
+              pw.Text('EVALUACIÓN ATM', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+              pw.SizedBox(height: 8),
+              _buildPdfDetail('Nivel de Dolor:', (respuestas['nivel_dolor'] ?? 0).toString() + '/10'),
+              _buildPdfDetail('Bloqueo de Mandíbula:', respuestas['bloqueo_mandibula']?.toString() ?? 'No'),
+              _buildPdfDetail('Chasquidos Dolorosos:', respuestas['chasquidos_dolorosos']?.toString() ?? 'No'),
+              _buildPdfDetail('Bruxismo Nocturno:', respuestas['bruxismo_nocturno']?.toString() ?? 'No'),
+              _buildPdfDetail('Cefalea Cervical:', respuestas['cefalea_cervical']?.toString() ?? 'No'),
+              pw.SizedBox(height: 8),
+              _buildPdfDetail('Puntaje de Riesgo Calculado:', (evaluacion['puntuacion'] ?? 0).toString() + ' pts'),
+              _buildPdfDetail('Riesgo ATM:', evaluacion['diagnostico'] ?? ''),
+            ],
+          ];
+        },
+      ),
+    );
+
+    await _saveAndLaunchPdf(
+      pdf,
+      filename: 'evaluacion_${paciente.nombre.replaceAll(' ', '_')}.pdf',
+    );
+  }
+
   // 2. GENERAR PDF CONFIRMACIÓN DE CITA
   // -------------------------------------------------------------
   static Future<void> generarPdfCita({

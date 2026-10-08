@@ -478,11 +478,20 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    PdfGenerator.generarPdfFonseca(
+                    final respuestas = eval['respuestas'];
+                    if (respuestas == null || (respuestas as Map).isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Esta evaluación es antigua o no contiene datos clínicos suficientes para generar un PDF.'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                      return;
+                    }
+
+                    PdfGenerator.generarPdfEvaluacionClinica(
                       paciente: _pacienteSeleccionado!,
-                      score: score,
-                      diagnostico: diagnostico,
-                      preguntas: const [],
+                      evaluacion: eval,
                       doctorInfo: const {
                         'name': 'Dra. María Rizo',
                         'colegiado': '12345',
@@ -492,7 +501,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
-                  label: const Text('Exportar PDF de Evaluación ATM', style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                  label: const Text('Exportar PDF de Evaluación', style: TextStyle(fontSize: 12, color: AppColors.primary)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

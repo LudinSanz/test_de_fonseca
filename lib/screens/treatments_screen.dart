@@ -632,7 +632,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
           return _buildTratamientoCard(
             nombre: "${e.value["tratamiento"]} (Pieza ${e.key})",
             estado: e.value["estado"] as String,
-            estadoColor: e.value["color"] as Color,
+            estadoColor: _getToothColor(e.key),
             precioGtq: (e.value["precio_gtq"] as num).toDouble(),
             etapas: ["Evaluaci�n", "Presupuesto", "En Proceso", "Terminado"].map((stage) {
                 if (stage == evo) return "$stage ?";
