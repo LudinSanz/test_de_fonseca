@@ -545,14 +545,14 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                       value: _codigoPais,
                       icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
                       items: const [
-                        DropdownMenuItem(value: "+502", child: Text("???? +502", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+503", child: Text("???? +503", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+504", child: Text("???? +504", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+505", child: Text("???? +505", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+506", child: Text("???? +506", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+507", child: Text("???? +507", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+52", child: Text("???? +52", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-                        DropdownMenuItem(value: "+1", child: Text("???? +1", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+502", child: Text("🇬🇹 +502", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+503", child: Text("🇸🇻 +503", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+504", child: Text("🇭🇳 +504", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+505", child: Text("🇳🇮 +505", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+506", child: Text("🇨🇷 +506", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+507", child: Text("🇵🇦 +507", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+52", child: Text("🇲🇽 +52", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                        DropdownMenuItem(value: "+1", child: Text("🇺🇸 +1", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _codigoPais = val);
