@@ -591,10 +591,51 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
   }
 
   // TAB 2: TRATAMIENTOS ACTIVOS & PLAN FINANCIERO (GTQ Q)
-  Widget _buildTratamientosActivosTab() {
+  Widget _buildPlanTratamientoTab() {
+    final todosTratamientos = <Map<String, dynamic>>[];
+    
+    // 1. Agregar tratamientos del odontograma
+    _odontogramState.forEach((key, value) {
+      if (value["tratamiento"] != "" && value["tratamiento"] != "Ninguno" && value["tratamiento"] != "Sin tratamiento") {
+        final t = Map<String, dynamic>.from(value);
+        t['is_odontogram'] = true;
+        todosTratamientos.add(t);
+      }
+    });
+    
+    // 2. Agregar tratamientos generales
+    for (var t in _tratamientosGenerales) {
+      final copy = Map<String, dynamic>.from(t);
+      copy['is_odontogram'] = false;
+      todosTratamientos.add(copy);
+    }
+    
+    // Ordenar por fecha reciente
+    todosTratamientos.sort((a, b) {
+      final fa = a['fecha']?.toString() ?? '';
+      final fb = b['fecha']?.toString() ?? '';
+      return fb.compareTo(fa);
+    });
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       children: [
+        // Botón para agregar tratamiento general
+        ElevatedButton.icon(
+          icon: const Icon(Icons.add, size: 20),
+          label: const Text('Agregar Tratamiento Libre'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          onPressed: () {
+            _mostrarDialogoPlanTratamiento();
+          },
+        ),
+        const SizedBox(height: 16),
+        
         // Presupuesto Resumen Card (GTQ Q)
         Container(
           padding: const EdgeInsets.all(18),
@@ -617,16 +658,9 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('ESTADO DE CUENTA (GTQ)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('Q ${_calcularTotal().toStringAsFixed(2)}', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('PAGADO: Q 2,500.00', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                      Text('PENDIENTE: Q 2,100.00', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      const Text('ESTADO DE CUENTA (GTQ)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('Q ${_calcularTotal().toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],
@@ -636,20 +670,200 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
         ),
         const SizedBox(height: 14),
 
-        ..._odontogramState.entries.where((e) => e.value["tratamiento"] != "" && e.value["tratamiento"] != "Ninguno").map((e) {
-          final String evo = e.value["evolucion"] ?? "Evaluaci�n";
-          return _buildTratamientoCard(
-            nombre: "${e.value["tratamiento"]} (Pieza ${e.key})",
-            estado: e.value["estado"] as String,
-            estadoColor: _getToothColor(e.key),
-            precioGtq: (e.value["precio_gtq"] as num).toDouble(),
-            etapas: ["Evaluaci�n", "Presupuesto", "En Proceso", "Terminado"].map((stage) {
-                if (stage == evo) return "$stage ?";
-                return stage;
-            }).toList(),
+        ...todosTratamientos.map((t) {
+          final String evo = t["evolucion"] ?? "Evaluación";
+          final String estadoStr = t["estado"] ?? "Pendiente";
+          final bool isOdonto = t['is_odontogram'] == true;
+          final int diente = t['diente'] ?? 0;
+          
+          Color estadoColor = AppColors.surfaceContainerLow;
+          if (estadoStr == 'Pendiente') estadoColor = AppColors.warning;
+          if (estadoStr == 'Problema' || estadoStr == 'En Proceso') estadoColor = AppColors.error;
+          if (estadoStr == 'Tratado' || estadoStr == 'Completado') estadoColor = AppColors.success;
+          if (estadoStr == 'Cancelado') estadoColor = AppColors.textLight;
+
+          return GestureDetector(
+            onTap: () {
+              if (isOdonto) {
+                // Editar desde odontograma
+                setState(() {
+                  _tabController.index = 0;
+                  _selectedToothNumber = diente;
+                });
+                _mostrarDialogoEdicionPieza(diente);
+              } else {
+                // Editar general
+                _mostrarDialogoPlanTratamiento(tratamientoEdit: t);
+              }
+            },
+            child: _buildTratamientoCard(
+              nombre: isOdonto ? "${t["tratamiento"]} (Pieza $diente)" : (t["tratamiento"] ?? 'Tratamiento General'),
+              estado: estadoStr,
+              estadoColor: estadoColor,
+              precioGtq: (t["precio_gtq"] as num?)?.toDouble() ?? 0.0,
+              etapas: ["Evaluación", "Presupuesto", "En Proceso", "Terminado", "Cancelado"].map((stage) {
+                  if (stage == evo) return "$stage ✓";
+                  return stage;
+              }).toList(),
+            ),
           );
         }).toList(),
+
+        if (todosTratamientos.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 30),
+            child: Center(
+              child: Text(
+                'No hay tratamientos registrados en el plan.',
+                style: TextStyle(color: AppColors.textLight),
+              ),
+            ),
+          )
       ],
+    );
+  }
+
+  void _mostrarDialogoPlanTratamiento({Map<String, dynamic>? tratamientoEdit}) {
+    final isEditing = tratamientoEdit != null;
+    final diagCtrl = TextEditingController(text: tratamientoEdit?["diagnostico"] ?? "");
+    final precioCtrl = TextEditingController(text: (tratamientoEdit?["precio_gtq"] != null && tratamientoEdit?["precio_gtq"] > 0) ? tratamientoEdit!["precio_gtq"].toString() : "");
+    final notasCtrl = TextEditingController(text: tratamientoEdit?["notas"] ?? "");
+    final nombreCtrl = TextEditingController(text: tratamientoEdit?["tratamiento"] ?? "");
+
+    String evol = tratamientoEdit?["evolucion"] ?? "Evaluación";
+    if (evol.isEmpty) evol = "Evaluación";
+
+    String estadoGeneral = tratamientoEdit?["estado"] ?? "Pendiente";
+    if (estadoGeneral.isEmpty) estadoGeneral = "Pendiente";
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(isEditing ? "Editar Tratamiento Libre" : "Nuevo Tratamiento Libre", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+          content: SingleChildScrollView(
+            child: StatefulBuilder(
+              builder: (ctx, setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: "Procedimiento / Tratamiento")),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: estadoGeneral,
+                      decoration: const InputDecoration(labelText: "Estado del Tratamiento"),
+                      items: [
+                        "Pendiente", "En Proceso", "Completado", "Cancelado"
+                      ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => estadoGeneral = val);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: evol,
+                      decoration: const InputDecoration(labelText: "Etapa Administrativa"),
+                      items: [
+                        "Evaluación", "Presupuesto", "En Proceso", "Terminado", "Cancelado"
+                      ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => evol = val);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(controller: diagCtrl, decoration: const InputDecoration(labelText: "Diagnóstico / Motivo")),
+                    const SizedBox(height: 10),
+                    TextField(controller: precioCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Precio (Opcional)")),
+                    const SizedBox(height: 10),
+                    TextField(controller: notasCtrl, maxLines: 2, decoration: const InputDecoration(labelText: "Notas / Observaciones")),
+                  ],
+                );
+              }
+            )
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            if (isEditing)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('Eliminar Tratamiento'),
+                      content: const Text('¿Estás seguro de eliminar este tratamiento del plan? Esta acción no se puede deshacer.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+                        TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Eliminar', style: TextStyle(color: AppColors.error))),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    final id = tratamientoEdit!['id'] as String;
+                    final supabaseService = SupabaseService();
+                    await supabaseService.eliminarTratamiento(id);
+                    setState(() {
+                      _tratamientosGenerales.removeWhere((t) => t['id'] == id);
+                    });
+                    if (mounted) Navigator.pop(ctx);
+                  }
+                },
+              )
+            else
+              const SizedBox.shrink(),
+              
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                  onPressed: () async {
+                    if (nombreCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debes introducir un nombre para el procedimiento')));
+                      return;
+                    }
+
+                    final preciogtq = double.tryParse(precioCtrl.text) ?? 0.0;
+
+                    final tratMap = {
+                      "id": isEditing ? tratamientoEdit!["id"] : "",
+                      "paciente_id": _pacienteSeleccionado?.id ?? "",
+                      "diente": 0,
+                      "diagnostico": diagCtrl.text,
+                      "tratamiento": nombreCtrl.text,
+                      "evolucion": evol,
+                      "precio_gtq": preciogtq,
+                      "estado": estadoGeneral,
+                      "notas": notasCtrl.text,
+                      "fecha": isEditing ? (tratamientoEdit!["fecha"] ?? DateTime.now().toIso8601String()) : DateTime.now().toIso8601String(),
+                    };
+
+                    final supabaseService = SupabaseService();
+                    await supabaseService.guardarTratamiento(tratMap);
+
+                    setState(() {
+                      if (isEditing) {
+                        final idx = _tratamientosGenerales.indexWhere((t) => t['id'] == tratamientoEdit!['id']);
+                        if (idx != -1) _tratamientosGenerales[idx] = tratMap;
+                      } else {
+                        if (tratMap["id"] == "") tratMap["id"] = "trat_" + DateTime.now().millisecondsSinceEpoch.toString();
+                        _tratamientosGenerales.add(tratMap);
+                      }
+                    });
+
+                    _cargarTratamientosDelPaciente(_pacienteSeleccionado?.id ?? "");
+
+                    if (mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text("Guardar"),
+                ),
+              ],
+            )
+          ],
+        );
+      },
     );
   }
 

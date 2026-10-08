@@ -212,7 +212,7 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
 
-    final logoBytes = await _loadLogo();
+    final logoBytes = await _loadLogoImage();
     final primaryColor = PdfColor.fromHex('#00BFA5'); // Rizo Dental Primary Color
     final headerBgColor = PdfColor.fromHex('#E0F2F1');
 
