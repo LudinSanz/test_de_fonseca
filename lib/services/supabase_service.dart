@@ -322,6 +322,17 @@ class SupabaseService {
     return localList;
   }
 
+  Future<void> eliminarTratamiento(String id) async {
+    try {
+      if (_supabase != null) {
+        await _supabase!.from('tratamientos').delete().eq('id', id);
+      }
+    } catch (e) {
+      debugPrint('Aviso: no se pudo eliminar tratamiento en Supabase remoto. $e');
+    }
+    await LocalDbService.deleteTratamientoMap(id);
+  }
+
   Future<void> guardarTratamiento(Map<String, dynamic> tratData) async {
     final String id = (tratData['id']?.toString() ?? '').isNotEmpty
         ? tratData['id'].toString()

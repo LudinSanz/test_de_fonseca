@@ -21,6 +21,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
   // Selected Tooth State for Interactive Odontogram
   int _selectedToothNumber = 16;
   final Map<int, Map<String, dynamic>> _odontogramState = {};
+  final List<Map<String, dynamic>> _tratamientosGenerales = [];
 
   @override
   void initState() {
@@ -40,6 +41,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
     setState(() {
       _isLoading = true;
       _odontogramState.clear();
+      _tratamientosGenerales.clear();
     });
     try {
       final supabaseService = SupabaseService();
@@ -56,6 +58,8 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
             "estado": t["estado"],
             "notas": t["notas"],
           };
+        } else {
+          _tratamientosGenerales.add(Map<String, dynamic>.from(t));
         }
       }
     } catch (e) {
@@ -194,9 +198,14 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
     double total = 0;
     _odontogramState.forEach((key, value) {
       if (value["precio_gtq"] != null) {
-        total += value["precio_gtq"];
+        total += (value["precio_gtq"] as num).toDouble();
       }
     });
+    for (var value in _tratamientosGenerales) {
+      if (value["precio_gtq"] != null) {
+        total += (value["precio_gtq"] as num).toDouble();
+      }
+    }
     return total;
   }
 
@@ -335,7 +344,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       tabs: const [
                         Tab(text: 'Odontograma'),
-                        Tab(text: 'Tratamientos Activos'),
+                        Tab(text: 'Plan de Tratamiento'),
                         Tab(text: 'Bichectomía & Estética'),
                       ],
                     ),
@@ -346,7 +355,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                       controller: _tabController,
                       children: [
                         _buildOdontogramaTab(),
-                        _buildTratamientosActivosTab(),
+                        _buildPlanTratamientoTab(),
                         _buildEsteticaFacialTab(),
                       ],
                     ),

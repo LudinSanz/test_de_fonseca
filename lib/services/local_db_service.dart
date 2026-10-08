@@ -417,6 +417,12 @@ class LocalDbService {
     await saveList(_keyTratamientos, list);
   }
 
+  static Future<void> deleteTratamientoMap(String id) async {
+    final list = await getTratamientosMap();
+    list.removeWhere((t) => t['id'] == id);
+    await saveTratamientosMap(list);
+  }
+
   static Future<void> upsertTratamientoMap(Map<String, dynamic> data) async {
     final list = await getTratamientosMap();
     final String id = data['id']?.toString() ?? 'trat_${DateTime.now().millisecondsSinceEpoch}';
