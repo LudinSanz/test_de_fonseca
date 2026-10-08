@@ -35,6 +35,36 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
     super.dispose();
   }
 
+  
+  Future<void> _cargarTratamientosDelPaciente(String pacienteId) async {
+    setState(() {
+      _isLoading = true;
+      _odontogramState.clear();
+    });
+    try {
+      final supabaseService = SupabaseService();
+      final tratamientos = await supabaseService.obtenerTratamientos(pacienteId: pacienteId);
+      for (var t in tratamientos) {
+        int d = t["diente"] ?? 0;
+        if (d > 0) {
+          _odontogramState[d] = {
+            "id": t["id"],
+            "diagnostico": t["diagnostico"],
+            "tratamiento": t["tratamiento"],
+            "evolucion": t["evolucion"],
+            "precio_gtq": t["precio_gtq"],
+            "estado": t["estado"],
+            "notas": t["notas"],
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading tratamientos: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _cargarPacientes() async {
     setState(() => _isLoading = true);
     try {
@@ -61,13 +91,15 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
 
   void _mostrarDialogoEdicionPieza(int toothNum) {
     final info = _odontogramState[toothNum] ?? {};
-    final estadoCtrl = TextEditingController(text: info["estado"] ?? "Sano");
     final diagCtrl = TextEditingController(text: info["diagnostico"] ?? "");
-    final tratCtrl = TextEditingController(text: info["tratamiento"] ?? "");
-    final precioCtrl = TextEditingController(text: (info["precio_gtq"] ?? 0.0).toString());
+    final precioCtrl = TextEditingController(text: info["precio_gtq"]?.toString() ?? "");
     final notasCtrl = TextEditingController(text: info["notas"] ?? "");
 
-    String selectedEstado = info["estado"] ?? "Sano";
+    String trat = info["tratamiento"] ?? "Ninguno";
+    if (trat.isEmpty || trat == "Sin tratamiento") trat = "Ninguno";
+
+    String evol = info["evolucion"] ?? "Evaluación";
+    if (evol.isEmpty) evol = "Evaluación";
 
     showDialog(
       context: context,
@@ -82,21 +114,33 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: selectedEstado,
-                      decoration: const InputDecoration(labelText: "Estado"),
-                      items: ["Sano", "Pendiente", "Problema", "Tratado"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      value: trat,
+                      decoration: const InputDecoration(labelText: "Tratamiento a realizar"),
+                      items: [
+                        "Limpieza Dental", "Extracción", "Endodoncia", "Corona", 
+                        "Resina", "Blanqueamiento", "Ortodoncia", "Implante", "Ninguno"
+                      ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedEstado = val);
+                        if (val != null) setDialogState(() => trat = val);
                       },
                     ),
                     const SizedBox(height: 10),
-                    TextField(controller: diagCtrl, decoration: const InputDecoration(labelText: "Diagn�stico")),
+                    DropdownButtonFormField<String>(
+                      value: evol,
+                      decoration: const InputDecoration(labelText: "Etapa / Evolución"),
+                      items: [
+                        "Evaluación", "Presupuesto", "En Proceso", "Terminado", "Cancelado"
+                      ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => evol = val);
+                      },
+                    ),
                     const SizedBox(height: 10),
-                    TextField(controller: tratCtrl, decoration: const InputDecoration(labelText: "Tratamiento a realizar")),
+                    TextField(controller: diagCtrl, decoration: const InputDecoration(labelText: "Diagnóstico")),
                     const SizedBox(height: 10),
                     TextField(controller: precioCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Precio (GTQ)")),
                     const SizedBox(height: 10),
-                    TextField(controller: notasCtrl, maxLines: 2, decoration: const InputDecoration(labelText: "Notas Cl�nicas")),
+                    TextField(controller: notasCtrl, maxLines: 2, decoration: const InputDecoration(labelText: "Notas Clínicas")),
                   ],
                 );
               }
@@ -106,18 +150,37 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-              onPressed: () {
+              onPressed: () async {
+                final preciogtq = double.tryParse(precioCtrl.text) ?? 0.0;
+                String estadoStr = "Pendiente";
+                if (evol == "Terminado") estadoStr = "Tratado";
+                if (evol == "Cancelado") estadoStr = "Sano";
+                if (evol == "Evaluación" && trat == "Ninguno") estadoStr = "Sano";
+                if (evol == "En Proceso") estadoStr = "Problema";
+
+                final tratMap = {
+                  "id": _odontogramState[toothNum]?["id"] ?? "",
+                  "paciente_id": _pacienteSeleccionado?.id ?? "",
+                  "diente": toothNum,
+                  "diagnostico": diagCtrl.text,
+                  "tratamiento": trat,
+                  "evolucion": evol,
+                  "precio_gtq": preciogtq,
+                  "estado": estadoStr,
+                  "notas": notasCtrl.text,
+                  "fecha": DateTime.now().toIso8601String(),
+                };
+
                 setState(() {
-                  _odontogramState[toothNum] = {
-                    "estado": selectedEstado,
-                    "color": selectedEstado == "Sano" ? AppColors.surfaceContainerLow : selectedEstado == "Pendiente" ? AppColors.warning : selectedEstado == "Problema" ? AppColors.error : AppColors.success,
-                    "diagnostico": diagCtrl.text,
-                    "tratamiento": tratCtrl.text,
-                    "precio_gtq": double.tryParse(precioCtrl.text) ?? 0.0,
-                    "notas": notasCtrl.text,
-                  };
+                  _odontogramState[toothNum] = tratMap;
                 });
-                Navigator.pop(ctx);
+
+                if (_pacienteSeleccionado != null) {
+                  final supabaseService = SupabaseService();
+                  await supabaseService.guardarTratamiento(tratMap);
+                }
+
+                if (mounted) Navigator.pop(ctx);
               },
               child: const Text("Guardar"),
             ),
@@ -140,7 +203,12 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
   Color _getToothColor(int toothNum) {
     final info = _odontogramState[toothNum];
     if (info == null) return AppColors.surfaceContainerLow;
-    return info['color'] as Color;
+    final estado = info['estado'] ?? 'Sano';
+    if (estado == 'Sano') return AppColors.surfaceContainerLow;
+    if (estado == 'Pendiente') return AppColors.warning;
+    if (estado == 'Problema') return AppColors.error;
+    if (estado == 'Tratado') return AppColors.success;
+    return AppColors.surfaceContainerLow;
   }
 
   @override
@@ -242,6 +310,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                               onChanged: (p) {
                                 if (p != null) {
                                   setState(() => _pacienteSeleccionado = p);
+                                  _cargarTratamientosDelPaciente(p.id);
                                 }
                               },
                             ),

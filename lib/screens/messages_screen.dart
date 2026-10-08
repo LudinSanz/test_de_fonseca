@@ -74,7 +74,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return _conversaciones[pacienteId] ?? [
       {
         'from': 'clinica',
-        'text': 'Conversación iniciada. Usa los accesos rápidos para enviar información al paciente por WhatsApp.',
+        'text': 'Historial local de borradores de WhatsApp. (La aplicación prepara los mensajes, pero TÚ decides enviarlos o no desde WhatsApp).',
         'time': DateTime.now().subtract(const Duration(minutes: 5)),
         'tipo': 'sistema',
       }
@@ -101,17 +101,31 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   // ============================================================
   // ABRIR WHATSAPP CON MENSAJE
-  // ============================================================
   Future<void> _abrirWhatsApp(Paciente p, String mensaje) async {
-    final telefono = p.telefono.replaceAll(RegExp(r'[^\d]'), '');
-    final tel = telefono.startsWith('502') ? telefono : '502$telefono';
+    if (p.telefono.isEmpty || p.telefono.length < 8) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El paciente no tiene un teléfono válido registrado.')));
+      }
+      return;
+    }
+
+    String telefono = p.telefono.replaceAll(RegExp(r'[^\d\+]'), '');
+    if (!telefono.startsWith('+')) {
+      if (!telefono.startsWith('502') && !telefono.startsWith('503') && !telefono.startsWith('504') && !telefono.startsWith('505') && !telefono.startsWith('506') && !telefono.startsWith('507') && !telefono.startsWith('52') && !telefono.startsWith('1')) {
+         telefono = "+502$telefono";
+      } else {
+         telefono = "+$telefono";
+      }
+    }
+    
+    final tel = telefono.replaceAll('+', '');
     final uri = Uri.parse('https://wa.me/$tel?text=${Uri.encodeComponent(mensaje)}');
 
     _agregarMensaje(p.id, {
       'from': 'clinica',
       'text': mensaje,
       'time': DateTime.now(),
-      'tipo': 'enviado',
+      'tipo': 'preparado',
     });
 
     if (await canLaunchUrl(uri)) {

@@ -9,6 +9,7 @@ class LocalDbService {
   static const String _keyInventario = 'db_inventario_v2';
   static const String _keyRecetas = 'db_recetas_v2';
   static const String _keyUsers = 'db_users_v2';
+  static const String _keyTratamientos = 'db_tratamientos_v2';
 
   // Seed Data Initializers
   static final List<Map<String, dynamic>> _seedPacientes = [
@@ -391,5 +392,31 @@ class LocalDbService {
       debugPrint('Error leyendo recetas NoSeed: $e');
     }
     return [];
+  }
+
+  // TRATAMIENTOS
+  static Future<List<Map<String, dynamic>>> getTratamientosMap() async {
+    return await getList(_keyTratamientos, []);
+  }
+
+  static Future<List<Map<String, dynamic>>> getTratamientosMapNoSeed() async {
+    return await getListNoSeed(_keyTratamientos);
+  }
+
+  static Future<void> saveTratamientosMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyTratamientos, list);
+  }
+
+  static Future<void> upsertTratamientoMap(Map<String, dynamic> data) async {
+    final list = await getTratamientosMap();
+    final String id = data['id']?.toString() ?? 'trat_${DateTime.now().millisecondsSinceEpoch}';
+    data['id'] = id;
+    final index = list.indexWhere((t) => t['id'].toString() == id);
+    if (index >= 0) {
+      list[index] = data;
+    } else {
+      list.insert(0, data);
+    }
+    await saveTratamientosMap(list);
   }
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/paciente.dart';
 import '../models/evaluacion.dart';
@@ -296,6 +296,57 @@ class SupabaseService {
     });
 
     await LocalDbService.upsertRecetaMap(recetaData);
+  }
+
+  // ==================== 5.5. TRATAMIENTOS ====================
+
+  Future<List<Map<String, dynamic>>> obtenerTratamientos({String? pacienteId}) async {
+    try {
+      if (_supabase != null) {
+        var query = _supabase!.from('tratamientos').select();
+        if (pacienteId != null && pacienteId.isNotEmpty) {
+          query = query.eq('paciente_id', pacienteId);
+        }
+        final response = await query;
+        final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        await LocalDbService.saveTratamientosMap(remoteList);
+        return remoteList;
+      }
+    } catch (e) {
+      debugPrint('Aviso Supabase obtenerTratamientos (usando cache): $e');
+    }
+    final localList = await LocalDbService.getTratamientosMapNoSeed();
+    if (pacienteId != null && pacienteId.isNotEmpty) {
+      return localList.where((t) => t['paciente_id'] == pacienteId || t['pacienteId'] == pacienteId).toList();
+    }
+    return localList;
+  }
+
+  Future<void> guardarTratamiento(Map<String, dynamic> tratData) async {
+    final String id = (tratData['id']?.toString() ?? '').isNotEmpty
+        ? tratData['id'].toString()
+        : _newId('trat');
+    tratData['id'] = id;
+
+    // Tratamos de guardar en Supabase (si la tabla existe, guardará; si no, fallará y guardará localmente)
+    try {
+      await _supabaseUpsert('tratamientos', {
+        'id': id,
+        'paciente_id': tratData['paciente_id'] ?? tratData['pacienteId'] ?? '',
+        'diente': tratData['diente'] ?? 0,
+        'diagnostico': tratData['diagnostico'] ?? '',
+        'tratamiento': tratData['tratamiento'] ?? '',
+        'evolucion': tratData['evolucion'] ?? '',
+        'precio_gtq': tratData['precio_gtq'] ?? 0.0,
+        'estado': tratData['estado'] ?? '',
+        'notas': tratData['notas'] ?? '',
+        'fecha': tratData['fecha'] ?? DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Aviso: no se pudo guardar en Supabase remoto (tabla tratamientos no existe?). Guardando localmente. $e');
+    }
+
+    await LocalDbService.upsertTratamientoMap(tratData);
   }
 
   // ==================== 6. PERFIL DOCTOR ====================
