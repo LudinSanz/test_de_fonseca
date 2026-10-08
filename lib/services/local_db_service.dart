@@ -400,7 +400,17 @@ class LocalDbService {
   }
 
   static Future<List<Map<String, dynamic>>> getTratamientosMapNoSeed() async {
-    return await getListNoSeed(_keyTratamientos);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_keyTratamientos);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List decoded = jsonDecode(jsonStr);
+        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('Error leyendo tratamientos NoSeed: $e');
+    }
+    return [];
   }
 
   static Future<void> saveTratamientosMap(List<Map<String, dynamic>> list) async {
