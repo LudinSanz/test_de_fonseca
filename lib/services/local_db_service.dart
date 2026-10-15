@@ -10,6 +10,7 @@ class LocalDbService {
   static const String _keyRecetas = 'db_recetas_v2';
   static const String _keyUsers = 'db_users_v2';
   static const String _keyTratamientos = 'db_tratamientos_v2';
+  static const String _keyExamenes = 'db_examenes_v2';
 
   // Seed Data Initializers
   static final List<Map<String, dynamic>> _seedPacientes = [
@@ -111,6 +112,49 @@ class LocalDbService {
       'medicamentos': '1. Ibuprofeno 600mg - 1 tableta cada 8 horas por 5 días tras comidas.\n2. Relaxil - 1 tableta por la noche antes de dormir.',
       'indicaciones': 'Uso obligatorio de férula miorrelajante nocturna. Aplicar compresas de agua tibia en articulaciones temporomandibulares 15 min.',
       'indicaciones_generales': 'Evitar chicle, alimentos duros o tostados. Realizar fisioterapia de apertura suave.',
+    },
+  ];
+
+  static final List<Map<String, dynamic>> _seedExamenes = [
+    {
+      'id': 'exam_demo_1',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'paciente_nombre': 'María Mercedes Morales',
+      'pacienteNombre': 'María Mercedes Morales',
+      'titulo': 'Radiografía Panorámica Digital (Control ATM)',
+      'tipo': 'radiografia',
+      'subtipo': 'Panorámica',
+      'zona': 'ATM y Maxilares',
+      'fecha': '2026-10-08',
+      'observaciones': 'Evaluación de cóndilos mandibulares y espacio articular. No se observan erosiones corticales severas en cóndilo derecho; leve aplanamiento en polo anterosuperior. Sin hallazgos periapicales agudos.',
+      'file_name': 'panoramica_atm_control.jpg',
+      'fileName': 'panoramica_atm_control.jpg',
+      'file_type': 'image',
+      'fileType': 'image',
+      'file_size_bytes': 1420000,
+      'fileSizeBytes': 1420000,
+      'created_at': DateTime.now().subtract(const Duration(days: 4)).toIso8601String(),
+    },
+    {
+      'id': 'exam_demo_2',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'paciente_nombre': 'María Mercedes Morales',
+      'pacienteNombre': 'María Mercedes Morales',
+      'titulo': 'Estudio Cefalométrico y Diagnóstico ATM',
+      'tipo': 'pdf',
+      'subtipo': 'Estudio PDF',
+      'zona': 'Craneo-mandibular',
+      'fecha': '2026-10-06',
+      'observaciones': 'Informe cefalométrico digital. Ángulo ANB aumentado indicativo de Clase II esqueletal leve. Guía incisiva disminuida favorable para placa oclusal miorrelajante.',
+      'file_name': 'informe_cefalometrico_rizo.pdf',
+      'fileName': 'informe_cefalometrico_rizo.pdf',
+      'file_type': 'pdf',
+      'fileType': 'pdf',
+      'file_size_bytes': 850000,
+      'fileSizeBytes': 850000,
+      'created_at': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
     },
   ];
 
@@ -434,5 +478,47 @@ class LocalDbService {
       list.insert(0, data);
     }
     await saveTratamientosMap(list);
+  }
+
+  // ==================== EXÁMENES & RADIOGRAFÍAS 360° ====================
+  static Future<List<Map<String, dynamic>>> getExamenesMap() async {
+    return await getList(_keyExamenes, _seedExamenes);
+  }
+
+  static Future<List<Map<String, dynamic>>> getExamenesMapNoSeed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_keyExamenes);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List decoded = jsonDecode(jsonStr);
+        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('Error leyendo exámenes NoSeed: $e');
+    }
+    return [];
+  }
+
+  static Future<void> saveExamenesMap(List<Map<String, dynamic>> list) async {
+    await saveList(_keyExamenes, list);
+  }
+
+  static Future<void> deleteExamenMap(String id) async {
+    final list = await getExamenesMap();
+    list.removeWhere((e) => e['id'] == id);
+    await saveExamenesMap(list);
+  }
+
+  static Future<void> upsertExamenMap(Map<String, dynamic> data) async {
+    final list = await getExamenesMap();
+    final String id = data['id']?.toString() ?? 'exam_${DateTime.now().millisecondsSinceEpoch}';
+    data['id'] = id;
+    final index = list.indexWhere((e) => e['id'].toString() == id);
+    if (index >= 0) {
+      list[index] = data;
+    } else {
+      list.insert(0, data);
+    }
+    await saveExamenesMap(list);
   }
 }

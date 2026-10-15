@@ -1,13 +1,17 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/paciente.dart';
+import '../models/examen_clinico.dart';
 import '../constants/colors.dart';
 import '../utils/pdf_generator.dart';
 import 'patient_register_screen.dart';
 import 'fonseca_test_screen.dart';
 import 'appointments_screen.dart';
 import 'prescription_screen.dart';
+import 'upload_exam_screen.dart';
+import 'exam_viewer_screen.dart';
 import '../services/supabase_service.dart';
 
 class PatientDirectoryScreen extends StatefulWidget {
@@ -31,12 +35,14 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   List<Map<String, dynamic>> _evaluaciones = [];
   List<Map<String, dynamic>> _recetas = [];
   List<Map<String, dynamic>> _citas = [];
+  List<ExamenClinico> _examenes = [];
+  String _filtroTipoExamen = 'todos';
   bool _isLoadingHistorial = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _searchController.addListener(_filterPacientes);
     _cargarPacientes();
   }
@@ -103,6 +109,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         supabaseService.obtenerEvaluaciones(pacienteId: paciente.id),
         supabaseService.obtenerRecetas(pacienteId: paciente.id),
         supabaseService.obtenerCitas(pacienteId: paciente.id),
+        supabaseService.obtenerExamenes(pacienteId: paciente.id),
       ]);
 
       if (mounted) {
@@ -110,6 +117,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
           _evaluaciones = results[0] as List<Map<String, dynamic>>;
           _recetas = results[1] as List<Map<String, dynamic>>;
           _citas = results[2] as List<Map<String, dynamic>>;
+          _examenes = results[3] as List<ExamenClinico>;
         });
       }
     } catch (e) {
@@ -160,6 +168,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         citas: _citas,
         recetas: _recetas,
         tratamientos: [],
+        examenes: _examenes,
         doctorInfo: doctorInfo,
       );
     } catch (e) {
@@ -403,45 +412,66 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                         const SizedBox(height: 14),
 
                         // Action Bar
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildQuickActionButton(
-                              icon: Icons.assignment_turned_in_outlined,
-                              label: 'Test Fonseca',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const FonsecaTestScreen()),
-                                ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
-                              },
-                            ),
-                            _buildQuickActionButton(
-                              icon: Icons.medication_outlined,
-                              label: 'Nueva Receta',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const PrescriptionScreen()),
-                                ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
-                              },
-                            ),
-                            _buildQuickActionButton(
-                              icon: Icons.calendar_month_outlined,
-                              label: 'Agendar Cita',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
-                                ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
-                              },
-                            ),
-                            _buildQuickActionButton(
-                              icon: Icons.picture_as_pdf_outlined,
-                              label: 'Expediente PDF',
-                              onTap: _imprimirExpedienteCompleto,
-                            ),
-                          ],
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildQuickActionButton(
+                                icon: Icons.assignment_turned_in_outlined,
+                                label: 'Test Fonseca',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const FonsecaTestScreen()),
+                                  ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
+                                icon: Icons.cloud_upload_outlined,
+                                label: 'Subir Examen',
+                                onTap: () async {
+                                  final nuevo = await Navigator.push<ExamenClinico>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UploadExamScreen(paciente: _selectedPaciente!),
+                                    ),
+                                  );
+                                  if (nuevo != null) {
+                                    _cargarHistorialPaciente(_selectedPaciente!);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
+                                icon: Icons.medication_outlined,
+                                label: 'Nueva Receta',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const PrescriptionScreen()),
+                                  ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
+                                icon: Icons.calendar_month_outlined,
+                                label: 'Agendar Cita',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+                                  ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
+                                icon: Icons.picture_as_pdf_outlined,
+                                label: 'Expediente PDF',
+                                onTap: _imprimirExpedienteCompleto,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -463,11 +493,12 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                       unselectedLabelColor: AppColors.textLight,
                       isScrollable: true,
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      tabs: const [
-                        Tab(text: 'Ficha Clínica'),
-                        Tab(text: 'Evaluaciones ATM'),
-                        Tab(text: 'Recetas Médicas'),
-                        Tab(text: 'Citas Médicas'),
+                      tabs: [
+                        const Tab(text: 'Ficha Clínica'),
+                        Tab(text: 'Exámenes & Rayos X (${_examenes.length})'),
+                        Tab(text: 'Evaluaciones ATM (${_evaluaciones.length})'),
+                        Tab(text: 'Recetas (${_recetas.length})'),
+                        Tab(text: 'Citas (${_citas.length})'),
                       ],
                     ),
                   ),
@@ -482,6 +513,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                             controller: _tabController,
                             children: [
                               _buildFichaClinicaTab(),
+                              _buildExamenesTab(),
                               _buildEvaluacionesTab(),
                               _buildRecetasTab(),
                               _buildCitasTab(),
@@ -587,7 +619,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Consultas Médicas: ${_evaluaciones.length} • Recetas: ${_recetas.length} • Citas: ${_citas.length}',
+                          'Exámenes & Rayos X: ${_examenes.length} • Consultas: ${_evaluaciones.length} • Recetas: ${_recetas.length} • Citas: ${_citas.length}',
                           style: const TextStyle(fontSize: 12, color: AppColors.textLight),
                         ),
                       ],
@@ -625,7 +657,490 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
     );
   }
 
-  // TAB 2: CONSULTAS CLÍNICAS
+  // TAB 2: EXÁMENES & RADIOGRAFÍAS 360°
+  Widget _buildExamenesTab() {
+    List<ExamenClinico> listaFiltrada = _examenes;
+    if (_filtroTipoExamen != 'todos') {
+      listaFiltrada = _examenes.where((e) => e.tipo == _filtroTipoExamen).toList();
+    }
+
+    return Column(
+      children: [
+        // Action & Filter Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildExamenFilterChip('Todos (${_examenes.length})', 'todos'),
+                      const SizedBox(width: 6),
+                      _buildExamenFilterChip('🩻 Rayos X', 'radiografia'),
+                      const SizedBox(width: 6),
+                      _buildExamenFilterChip('📄 PDFs', 'pdf'),
+                      const SizedBox(width: 6),
+                      _buildExamenFilterChip('📷 Fotos', 'imagen'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final nuevo = await Navigator.push<ExamenClinico>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UploadExamScreen(paciente: _selectedPaciente!),
+                    ),
+                  );
+                  if (nuevo != null) {
+                    _cargarHistorialPaciente(_selectedPaciente!);
+                  }
+                },
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 16, color: Colors.white),
+                label: const Text('Subir', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // List or Empty
+        Expanded(
+          child: listaFiltrada.isEmpty
+              ? _buildEmptyExamenesState()
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  itemCount: listaFiltrada.length,
+                  itemBuilder: (context, index) {
+                    final examen = listaFiltrada[index];
+                    return _buildExamenCard(examen);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExamenFilterChip(String label, String value) {
+    final isSelected = _filtroTipoExamen == value;
+    return GestureDetector(
+      onTap: () => setState(() => _filtroTipoExamen = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.ghostOutline,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : AppColors.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExamenCard(ExamenClinico examen) {
+    final fechaStr = '${examen.fecha.day}/${examen.fecha.month}/${examen.fecha.year}';
+    Color badgeColor;
+    IconData badgeIcon;
+
+    switch (examen.tipo.toLowerCase()) {
+      case 'radiografia':
+        badgeColor = const Color(0xFF0284C7);
+        badgeIcon = Icons.biotech_outlined;
+        break;
+      case 'pdf':
+        badgeColor = const Color(0xFFE11D48);
+        badgeIcon = Icons.picture_as_pdf_outlined;
+        break;
+      case 'imagen':
+        badgeColor = const Color(0xFF059669);
+        badgeIcon = Icons.camera_alt_outlined;
+        break;
+      default:
+        badgeColor = const Color(0xFF7C3AED);
+        badgeIcon = Icons.folder_open_outlined;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadowSoft,
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(badgeIcon, size: 14, color: badgeColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${examen.tipoLabel} • ${examen.subtipo}',
+                      style: TextStyle(
+                        color: badgeColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    fechaStr,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.textLight),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Eliminar Estudio',
+                    onPressed: () => _eliminarExamenConfirmar(examen),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            examen.titulo,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Zona: ${examen.zona} • Archivo: ${examen.fileName} (${examen.formattedSize})',
+            style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+          ),
+
+          const SizedBox(height: 12),
+
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ExamViewerScreen(examen: examen, paciente: _selectedPaciente),
+                ),
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: examen.fileBase64 != null && examen.fileBase64!.isNotEmpty
+                  ? (examen.isPdf
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      examen.fileName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.onSurface),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${examen.formattedSize} • Toca para abrir y visualizar PDF',
+                                      style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.open_in_new, size: 18, color: AppColors.primary),
+                            ],
+                          ),
+                        )
+                      : Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Image.memory(
+                              base64Decode(examen.fileBase64!),
+                              width: double.infinity,
+                              height: 140,
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              margin: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                  SizedBox(width: 4),
+                                  Text('Ver Rayos X', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ))
+                  : Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.ghostOutline),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(badgeIcon, color: badgeColor, size: 26),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  examen.titulo,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.onSurface),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Estudio clínico digitalizado • Toca para ver detalle',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+
+          if (examen.observaciones.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                examen.observaciones,
+                style: const TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.3),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ExamViewerScreen(examen: examen, paciente: _selectedPaciente),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.visibility_outlined, size: 16, color: AppColors.primary),
+                  label: const Text('Visor Clínico 360°', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.ghostOutline, width: 1.0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _compartirExamenWhatsApp(examen),
+                  icon: const Icon(Icons.chat_outlined, size: 16, color: Colors.white),
+                  label: const Text('WhatsApp', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyExamenesState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.biotech_outlined, size: 48, color: AppColors.primary),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay exámenes o radiografías cargadas',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Presiona el botón para digitalizar radiografías panorámicas, periapicales, estudios en PDF o fotografías clínicas desde el celular.',
+              style: TextStyle(color: AppColors.textLight, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final nuevo = await Navigator.push<ExamenClinico>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UploadExamScreen(paciente: _selectedPaciente!),
+                  ),
+                );
+                if (nuevo != null) {
+                  _cargarHistorialPaciente(_selectedPaciente!);
+                }
+              },
+              icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
+              label: const Text('Jalar Examen desde el Celular', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _compartirExamenWhatsApp(ExamenClinico examen) {
+    if (_selectedPaciente == null) return;
+    final mensaje = '🦷 *RIZO DENTAL • EXPEDIENTE CLÍNICO 360°*\n\n'
+        'Estimado(a) *${_selectedPaciente!.nombre} ${_selectedPaciente!.apellido}*,\n'
+        'Le enviamos la ficha de su estudio radiográfico / clínico realizado:\n\n'
+        '📋 *Estudio:* ${examen.titulo}\n'
+        '🩻 *Tipo:* ${examen.tipoLabel} (${examen.subtipo})\n'
+        '📅 *Fecha:* ${examen.fecha.day}/${examen.fecha.month}/${examen.fecha.year}\n'
+        '🎯 *Zona:* ${examen.zona}\n\n'
+        '📝 *Hallazgos Clínicos del Especialista:*\n'
+        '${examen.observaciones.isNotEmpty ? examen.observaciones : "Estudio archivado en su expediente digital sin novedades patológicas inmediatas."}\n\n'
+        '📍 *Rizo Dental Sanctuary*\n'
+        'Dra. María Rizo • Especialista ATM & Odontología Integral';
+
+    _abrirWhatsApp(_selectedPaciente!.telefono, mensaje);
+  }
+
+  void _eliminarExamenConfirmar(ExamenClinico examen) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar examen clínico?'),
+        content: Text('Se eliminará "${examen.titulo}" del expediente del paciente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final supabaseService = SupabaseService();
+              await supabaseService.eliminarExamen(examen.id);
+              _cargarHistorialPaciente(_selectedPaciente!);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Examen eliminado del expediente.')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAB 3: CONSULTAS CLÍNICAS
   Widget _buildEvaluacionesTab() {
     if (_evaluaciones.isEmpty) {
       return _buildEmptyState('No hay consultas clínicas registradas para este paciente.');

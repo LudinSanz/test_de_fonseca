@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/paciente.dart';
+import '../models/examen_clinico.dart';
 
 class PdfGenerator {
   // Carga segura del logo de Rizo Dental desde los assets
@@ -810,6 +811,7 @@ class PdfGenerator {
     required List<Map<String, dynamic>> citas,
     required List<Map<String, dynamic>> recetas,
     required List<Map<String, dynamic>> tratamientos,
+    List<ExamenClinico>? examenes,
     required Map<String, dynamic>? doctorInfo,
   }) async {
     final pdf = pw.Document();
@@ -947,6 +949,39 @@ class PdfGenerator {
                       ],
                     ),
                     pw.Text(c['estado'] ?? 'Programada', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                  ],
+                ),
+              )),
+            pw.SizedBox(height: 16),
+
+            // Section: Estudios Radiográficos y Exámenes Clínicos (360°)
+            pw.Text('ESTUDIOS RADIOGRÁFICOS Y EXÁMENES CLÍNICOS (EXPEDIENTE 360°):', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+            pw.SizedBox(height: 6),
+            if (examenes == null || examenes.isEmpty)
+              pw.Text('Sin exámenes o radiografías digitalizadas.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            if (examenes != null && examenes.isNotEmpty)
+              ...examenes.map((ex) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 6),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                  borderRadius: pw.BorderRadius.circular(6),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('${ex.tipoLabel}: ${ex.titulo} (${ex.subtipo})', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Zona: ${ex.zona} • Archivo: ${ex.fileName} (${ex.formattedSize}) • Fecha: ${ex.fecha.day}/${ex.fecha.month}/${ex.fecha.year}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                          if (ex.observaciones.isNotEmpty)
+                            pw.Text('Hallazgos: ${ex.observaciones}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800)),
+                        ],
+                      ),
+                    ),
+                    pw.Text(ex.subtipo, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   ],
                 ),
               )),

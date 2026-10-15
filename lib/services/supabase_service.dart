@@ -4,6 +4,7 @@ import '../models/paciente.dart';
 import '../models/evaluacion.dart';
 import '../models/configuracion_app.dart';
 import '../models/reporte.dart';
+import '../models/examen_clinico.dart';
 import 'local_db_service.dart';
 
 /// SupabaseService — NUBE ES LA FUENTE PRINCIPAL.
@@ -451,6 +452,74 @@ class SupabaseService {
     return null;
   }
 
+  // ==================== 8. EXÁMENES & RADIOGRAFÍAS 360° ====================
+
+  Future<List<ExamenClinico>> obtenerExamenes({String? pacienteId}) async {
+    try {
+      if (_supabase != null) {
+        var query = _supabase!.from('examenes_clinicos').select();
+        if (pacienteId != null && pacienteId.isNotEmpty) {
+          query = query.eq('paciente_id', pacienteId);
+        }
+        final response = await query.order('fecha', ascending: false);
+        final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        await LocalDbService.saveExamenesMap(remoteList);
+        return remoteList.map((e) => ExamenClinico.fromMap(e, e['id'].toString())).toList();
+      }
+    } catch (e) {
+      debugPrint('Aviso Supabase obtenerExamenes (usando cache local): $e');
+    }
+    final localList = await LocalDbService.getExamenesMap();
+    final filtered = (pacienteId != null && pacienteId.isNotEmpty)
+        ? localList.where((e) => (e['paciente_id'] == pacienteId || e['pacienteId'] == pacienteId)).toList()
+        : localList;
+    return filtered.map((e) => ExamenClinico.fromMap(e, e['id'].toString())).toList();
+  }
+
+  Future<void> guardarExamen(ExamenClinico examen) async {
+    final Map<String, dynamic> map = examen.toMap();
+    if (map['id'] == null || map['id'].toString().isEmpty) {
+      map['id'] = _newId('exam');
+    }
+
+    await LocalDbService.upsertExamenMap(map);
+
+    if (_supabase != null) {
+      try {
+        await _supabaseUpsert('examenes_clinicos', {
+          'id': map['id'],
+          'paciente_id': map['paciente_id'] ?? '',
+          'paciente_nombre': map['paciente_nombre'] ?? '',
+          'titulo': map['titulo'] ?? '',
+          'tipo': map['tipo'] ?? '',
+          'subtipo': map['subtipo'] ?? '',
+          'zona': map['zona'] ?? '',
+          'fecha': map['fecha'] ?? DateTime.now().toIso8601String().split('T')[0],
+          'observaciones': map['observaciones'] ?? '',
+          'file_name': map['file_name'] ?? '',
+          'file_type': map['file_type'] ?? '',
+          'file_size_bytes': map['file_size_bytes'] ?? 0,
+          if (map['file_base64'] != null) 'file_base64': map['file_base64'],
+          if (map['file_url'] != null) 'file_url': map['file_url'],
+          'created_at': map['created_at'] ?? DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('Aviso Supabase guardarExamen en nube: $e');
+      }
+    }
+  }
+
+  Future<void> eliminarExamen(String id) async {
+    await LocalDbService.deleteExamenMap(id);
+    if (_supabase != null) {
+      try {
+        await _supabaseDelete('examenes_clinicos', id);
+      } catch (e) {
+        debugPrint('Aviso Supabase delete examen: $e');
+      }
+    }
+  }
+
   // ==================== SYNC DE EMERGENCIA ====================
 
   Future<Map<String, int>> sincronizarCacheANube() async {
@@ -518,7 +587,32 @@ class SupabaseService {
       } catch (e) { debugPrint('Error sync receta ${r['id']}: $e'); }
     }
 
-    return {'pacientes': syncedPacientes, 'citas': syncedCitas, 'evaluaciones': syncedEvals, 'recetas': syncedRecetas};
+    int syncedExamenes = 0;
+    final examenes = await LocalDbService.getExamenesMapNoSeed();
+    for (var ex in examenes) {
+      try {
+        await _supabase!.from('examenes_clinicos').upsert({
+          'id': ex['id'],
+          'paciente_id': ex['paciente_id'] ?? ex['pacienteId'] ?? '',
+          'paciente_nombre': ex['paciente_nombre'] ?? ex['pacienteNombre'] ?? '',
+          'titulo': ex['titulo'] ?? '',
+          'tipo': ex['tipo'] ?? '',
+          'subtipo': ex['subtipo'] ?? '',
+          'zona': ex['zona'] ?? '',
+          'fecha': ex['fecha'] ?? DateTime.now().toIso8601String().split('T')[0],
+          'observaciones': ex['observaciones'] ?? '',
+          'file_name': ex['file_name'] ?? ex['fileName'] ?? '',
+          'file_type': ex['file_type'] ?? ex['fileType'] ?? '',
+          'file_size_bytes': ex['file_size_bytes'] ?? ex['fileSizeBytes'] ?? 0,
+          if (ex['file_base64'] != null) 'file_base64': ex['file_base64'],
+          if (ex['file_url'] != null) 'file_url': ex['file_url'],
+          'created_at': ex['created_at'] ?? ex['createdAt'] ?? DateTime.now().toIso8601String(),
+        });
+        syncedExamenes++;
+      } catch (e) { debugPrint('Error sync examen ${ex['id']}: $e'); }
+    }
+
+    return {'pacientes': syncedPacientes, 'citas': syncedCitas, 'evaluaciones': syncedEvals, 'recetas': syncedRecetas, 'examenes': syncedExamenes};
   }
 }
 
