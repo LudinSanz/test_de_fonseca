@@ -11,6 +11,7 @@ import 'appointments_screen.dart';
 import 'prescription_screen.dart';
 import 'upload_exam_screen.dart';
 import 'exam_viewer_screen.dart';
+import 'treatments_screen.dart';
 
 class PatientHistoryScreen extends StatefulWidget {
   final Paciente? selectedPatient;
@@ -348,6 +349,17 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
+                                  ).then((_) => _cargarHistorialPaciente(_pacienteSeleccionado!));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
+                                icon: Icons.medical_services_outlined,
+                                label: 'Tratamientos & Estética',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => TreatmentsScreen(paciente: _pacienteSeleccionado!)),
                                   ).then((_) => _cargarHistorialPaciente(_pacienteSeleccionado!));
                                 },
                               ),

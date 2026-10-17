@@ -12,6 +12,7 @@ import 'appointments_screen.dart';
 import 'prescription_screen.dart';
 import 'upload_exam_screen.dart';
 import 'exam_viewer_screen.dart';
+import 'treatments_screen.dart';
 import '../services/supabase_service.dart';
 
 class PatientDirectoryScreen extends StatefulWidget {
@@ -35,6 +36,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   List<Map<String, dynamic>> _evaluaciones = [];
   List<Map<String, dynamic>> _recetas = [];
   List<Map<String, dynamic>> _citas = [];
+  List<Map<String, dynamic>> _tratamientos = [];
   List<ExamenClinico> _examenes = [];
   String _filtroTipoExamen = 'todos';
   bool _isLoadingHistorial = false;
@@ -42,7 +44,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _searchController.addListener(_filterPacientes);
     _cargarPacientes();
   }
@@ -110,6 +112,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         supabaseService.obtenerRecetas(pacienteId: paciente.id),
         supabaseService.obtenerCitas(pacienteId: paciente.id),
         supabaseService.obtenerExamenes(pacienteId: paciente.id),
+        supabaseService.obtenerTratamientos(pacienteId: paciente.id),
       ]);
 
       if (mounted) {
@@ -118,6 +121,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
           _recetas = results[1] as List<Map<String, dynamic>>;
           _citas = results[2] as List<Map<String, dynamic>>;
           _examenes = results[3] as List<ExamenClinico>;
+          _tratamientos = results[4] as List<Map<String, dynamic>>;
         });
       }
     } catch (e) {
@@ -167,7 +171,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         evaluaciones: _evaluaciones,
         citas: _citas,
         recetas: _recetas,
-        tratamientos: [],
+        tratamientos: _tratamientos,
         examenes: _examenes,
         doctorInfo: doctorInfo,
       );
@@ -428,6 +432,17 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                               ),
                               const SizedBox(width: 8),
                               _buildQuickActionButton(
+                                icon: Icons.medical_services_outlined,
+                                label: 'Tratamientos & Estética',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => TreatmentsScreen(paciente: _selectedPaciente!)),
+                                  ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickActionButton(
                                 icon: Icons.cloud_upload_outlined,
                                 label: 'Subir Examen',
                                 onTap: () async {
@@ -495,6 +510,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       tabs: [
                         const Tab(text: 'Ficha Clínica'),
+                        Tab(text: 'Tratamientos (${_tratamientos.length})'),
                         Tab(text: 'Exámenes & Rayos X (${_examenes.length})'),
                         Tab(text: 'Evaluaciones ATM (${_evaluaciones.length})'),
                         Tab(text: 'Recetas (${_recetas.length})'),
@@ -513,6 +529,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                             controller: _tabController,
                             children: [
                               _buildFichaClinicaTab(),
+                              _buildTratamientosTab(),
                               _buildExamenesTab(),
                               _buildEvaluacionesTab(),
                               _buildRecetasTab(),
@@ -1481,6 +1498,196 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
           ),
         );
       },
+    );
+  }
+
+  // TAB 2: TRATAMIENTOS & ESTÉTICA FACIAL
+  Widget _buildTratamientosTab() {
+    double totalPresupuesto = 0;
+    double totalAbonado = 0;
+    for (var t in _tratamientos) {
+      totalPresupuesto += ((t['precio_gtq'] as num?) ?? 0.0).toDouble();
+      totalAbonado += ((t['abono_gtq'] as num?) ?? 0.0).toDouble();
+    }
+    final saldo = (totalPresupuesto - totalAbonado).clamp(0.0, double.infinity);
+
+    return Column(
+      children: [
+        // Action Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Tratamientos: ${_tratamientos.length} registros',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TreatmentsScreen(paciente: _selectedPaciente!),
+                    ),
+                  ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                },
+                icon: const Icon(Icons.tune_outlined, size: 16, color: Colors.white),
+                label: const Text('Gestionar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Financial mini banner if treatments exist
+        if (_tratamientos.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total: Q ${totalPresupuesto.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                Text('Abonado: Q ${totalAbonado.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success)),
+                Text('Saldo: Q ${saldo.toStringAsFixed(2)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: saldo > 0 ? AppColors.error : AppColors.success)),
+              ],
+            ),
+          ),
+
+        // List or Empty
+        Expanded(
+          child: _tratamientos.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.medical_services_outlined, size: 48, color: AppColors.textLight),
+                      const SizedBox(height: 12),
+                      const Text('No hay tratamientos asignados a este paciente.', style: TextStyle(color: AppColors.textLight, fontSize: 13)),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Crear Primer Tratamiento'),
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TreatmentsScreen(paciente: _selectedPaciente!),
+                            ),
+                          ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  itemCount: _tratamientos.length,
+                  itemBuilder: (context, index) {
+                    final t = _tratamientos[index];
+                    final String nombre = t['tratamiento'] ?? 'Tratamiento';
+                    final String subtipo = t['subtipo'] ?? '';
+                    final String cat = t['categoria'] ?? '';
+                    final int diente = t['diente'] ?? 0;
+                    final String evo = t['evolucion'] ?? 'En Proceso';
+                    final String estado = t['estado'] ?? 'Pendiente';
+                    final double costo = ((t['precio_gtq'] as num?) ?? 0.0).toDouble();
+                    final double abono = ((t['abono_gtq'] as num?) ?? 0.0).toDouble();
+                    final double sal = (costo - abono).clamp(0.0, double.infinity);
+
+                    Color estadoColor = AppColors.warning;
+                    if (estado == 'Completado' || estado == 'Tratado') estadoColor = AppColors.success;
+                    if (estado == 'En Proceso' || estado == 'Problema') estadoColor = AppColors.primary;
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TreatmentsScreen(paciente: _selectedPaciente!),
+                          ),
+                        ).then((_) => _cargarHistorialPaciente(_selectedPaciente!));
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [
+                            BoxShadow(color: AppColors.shadowSoft, blurRadius: 14, offset: Offset(0, 3)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        cat == 'estetica_facial' ? Icons.spa_outlined : Icons.healing_outlined,
+                                        size: 18,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          diente > 0 ? '$nombre (Pieza #$diente)' : nombre,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.onSurface),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: estadoColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(estado, style: TextStyle(color: estadoColor, fontWeight: FontWeight.bold, fontSize: 10)),
+                                ),
+                              ],
+                            ),
+                            if (subtipo.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(subtipo, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+                            ],
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Etapa: $evo', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                                Text('Q ${costo.toStringAsFixed(2)} (Saldo: Q ${sal.toStringAsFixed(2)})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 

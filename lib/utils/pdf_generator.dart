@@ -1006,11 +1006,20 @@ class PdfGenerator {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(t['nombre'] ?? t['concepto'] ?? 'Tratamiento', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Estado: ${t['estado'] ?? "En Proceso"}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                        pw.Text(
+                          t['tratamiento'] ?? t['nombre'] ?? t['concepto'] ?? 'Tratamiento',
+                          style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(
+                          'Estado: ${t['estado'] ?? "En Proceso"} • Etapa: ${t['evolucion'] ?? "Evaluación"}${((t['abono_gtq'] as num?) ?? 0) > 0 ? " • Abonado: Q ${((t['abono_gtq'] as num)).toStringAsFixed(2)}" : ""}',
+                          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                        ),
                       ],
                     ),
-                    pw.Text('Q ${(t['precio'] ?? t['costo'] ?? 0.0).toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    pw.Text(
+                      'Q ${(((t['precio_gtq'] ?? t['precio'] ?? t['costo'] ?? 0.0) as num)).toStringAsFixed(2)}',
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: primaryColor),
+                    ),
                   ],
                 ),
               )),

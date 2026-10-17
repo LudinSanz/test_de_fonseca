@@ -158,6 +158,112 @@ class LocalDbService {
     },
   ];
 
+  static final List<Map<String, dynamic>> _seedTratamientos = [
+    {
+      'id': 'trat_demo_1',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'diente': 0,
+      'categoria': 'estetica_facial',
+      'tratamiento': 'Lipopapada Enzimática',
+      'subtipo': 'Enzimas Recombinantes PB Serum',
+      'diagnostico': 'Adiposidad submentoniana localizada moderada con pérdida de definición del ángulo cérvico-mandibular.',
+      'evolucion': 'Sesión 1',
+      'etapa_actual_index': 3,
+      'etapas': [
+        'Valoración Facial & Marcaje',
+        'Presupuesto',
+        'Consentimiento Informado',
+        'Sesión 1 (Aplicación)',
+        'Control 15 días',
+        'Sesión 2 (Refuerzo)',
+        'Alta Definitiva'
+      ],
+      'precio_gtq': 1800.0,
+      'abono_gtq': 1000.0,
+      'estado': 'En Proceso',
+      'zona': 'Submentón y reborde mandibular',
+      'notas': 'Primera dosis aplicada con técnica retrotrazante en abanico. Indicada mentonera 12h/día, abundante hidratación.',
+      'fecha': '2026-10-14',
+    },
+    {
+      'id': 'trat_demo_2',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'diente': 0,
+      'categoria': 'estetica_facial',
+      'tratamiento': 'Bichectomía Quirúrgica Bilateral',
+      'subtipo': 'Extracción de Bolsas de Bichat',
+      'diagnostico': 'Hipertrofia de cojinetes adiposos de Bichat, asimetría leve del tercio inferior facial.',
+      'evolucion': 'Consentimiento Quirúrgico',
+      'etapa_actual_index': 2,
+      'etapas': [
+        'Valoración & Fotografía',
+        'Presupuesto & Preoperatorios',
+        'Consentimiento Quirúrgico',
+        'Cirugía Ambulatoria',
+        'Control 48 Horas',
+        'Retiro de Puntos (7 días)',
+        'Alta & Control 30 días'
+      ],
+      'precio_gtq': 3500.0,
+      'abono_gtq': 1500.0,
+      'estado': 'Pendiente',
+      'zona': 'Bolsas de Bichat bilaterales',
+      'notas': 'Exámenes preoperatorios aprobados (Tiempos de coagulación y hemograma normales). Consentimiento entregado.',
+      'fecha': '2026-10-12',
+    },
+    {
+      'id': 'trat_demo_3',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'diente': 0,
+      'categoria': 'atm',
+      'tratamiento': 'Férula Oclusal Miorrelajante Tipo Michigan',
+      'subtipo': 'Dispositivo Oclusal Acrílico',
+      'diagnostico': 'Bruxismo céntrico y sobrecarga articular témporomandibular moderada.',
+      'evolucion': 'En Proceso',
+      'etapa_actual_index': 2,
+      'etapas': [
+        'Evaluación Fonseca',
+        'Toma de Impresiones',
+        'Entrega y Ajuste Oclusal',
+        'Control 15 días',
+        'Control 3 meses'
+      ],
+      'precio_gtq': 1200.0,
+      'abono_gtq': 1200.0,
+      'estado': 'En Proceso',
+      'zona': 'Arcada Superior',
+      'notas': 'Férula acrílica rígida entregada. Contactos oclusales balanceados y guías caninas verificadas.',
+      'fecha': '2026-10-08',
+    },
+    {
+      'id': 'trat_demo_4',
+      'paciente_id': 'paciente_demo',
+      'pacienteId': 'paciente_demo',
+      'diente': 16,
+      'categoria': 'odontologia',
+      'tratamiento': 'Resina',
+      'subtipo': 'Restauración Estética Fotocurable',
+      'diagnostico': 'Caries de esmalte y dentina en fosa oclusal de primer molar superior derecho.',
+      'evolucion': 'Terminado',
+      'etapa_actual_index': 3,
+      'etapas': [
+        'Evaluación',
+        'Presupuesto',
+        'Preparación Cavitaria',
+        'Restauración y Pulido'
+      ],
+      'precio_gtq': 350.0,
+      'abono_gtq': 350.0,
+      'estado': 'Tratado',
+      'zona': 'Pieza 16 - Cara Oclusal',
+      'notas': 'Aislamiento relativo, grabado ácido, adhesivo universal y resina nanohíbrida color A2. Oclusión verificada.',
+      'fecha': '2026-10-05',
+    },
+  ];
+
   // Helper Methods to Read/Write Lists to SharedPreferences
   static Future<List<Map<String, dynamic>>> getList(String key, List<Map<String, dynamic>> defaultSeed) async {
     try {
@@ -440,7 +546,7 @@ class LocalDbService {
 
   // TRATAMIENTOS
   static Future<List<Map<String, dynamic>>> getTratamientosMap() async {
-    return await getList(_keyTratamientos, []);
+    return await getList(_keyTratamientos, _seedTratamientos);
   }
 
   static Future<List<Map<String, dynamic>>> getTratamientosMapNoSeed() async {
@@ -454,7 +560,7 @@ class LocalDbService {
     } catch (e) {
       debugPrint('Error leyendo tratamientos NoSeed: $e');
     }
-    return [];
+    return List<Map<String, dynamic>>.from(_seedTratamientos);
   }
 
   static Future<void> saveTratamientosMap(List<Map<String, dynamic>> list) async {

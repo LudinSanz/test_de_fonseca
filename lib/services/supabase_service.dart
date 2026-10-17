@@ -342,7 +342,7 @@ class SupabaseService {
 
     // Tratamos de guardar en Supabase (si la tabla existe, guardará; si no, fallará y guardará localmente)
     try {
-      await _supabaseUpsert('tratamientos', {
+      final remoteMap = <String, dynamic>{
         'id': id,
         'paciente_id': tratData['paciente_id'] ?? tratData['pacienteId'] ?? '',
         'diente': tratData['diente'] ?? 0,
@@ -353,7 +353,10 @@ class SupabaseService {
         'estado': tratData['estado'] ?? '',
         'notas': tratData['notas'] ?? '',
         'fecha': tratData['fecha'] ?? DateTime.now().toIso8601String(),
-      });
+      };
+      if (tratData.containsKey('categoria')) remoteMap['categoria'] = tratData['categoria'];
+      if (tratData.containsKey('abono_gtq')) remoteMap['abono_gtq'] = tratData['abono_gtq'];
+      await _supabaseUpsert('tratamientos', remoteMap);
     } catch (e) {
       debugPrint('Aviso: no se pudo guardar en Supabase remoto (tabla tratamientos no existe?). Guardando localmente. $e');
     }
