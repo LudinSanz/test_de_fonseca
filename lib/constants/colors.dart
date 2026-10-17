@@ -4,6 +4,7 @@ class AppColors {
   // Rizo Dental: "Rizo Dental" Design System Palette
   static const Color primary = Color(0xFF003F87);
   static const Color primaryContainer = Color(0xFF0056B3);
+  static const Color secondary = Color(0xFF0056B3);
   static const Color surface = Color(0xFFF8F9FA);
   static const Color surfaceContainerLow = Color(0xFFF3F4F5);
   static const Color surfaceContainerLowest = Color(0xFFFFFFFF);

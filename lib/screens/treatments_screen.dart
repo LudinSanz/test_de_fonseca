@@ -1619,7 +1619,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: cat == 'estetica_facial' ? AppColors.secondary.withOpacity(0.15) : (cat == 'atm' ? Colors.deepPurple.withOpacity(0.12) : AppColors.primary.withOpacity(0.12)),
+                                  color: cat == 'estetica_facial' ? AppColors.primaryContainer.withOpacity(0.15) : (cat == 'atm' ? Colors.deepPurple.withOpacity(0.12) : AppColors.primary.withOpacity(0.12)),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -1627,7 +1627,7 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
-                                    color: cat == 'estetica_facial' ? AppColors.secondary : (cat == 'atm' ? Colors.deepPurple : AppColors.primary),
+                                    color: cat == 'estetica_facial' ? AppColors.primaryContainer : (cat == 'atm' ? Colors.deepPurple : AppColors.primary),
                                   ),
                                 ),
                               ),
