@@ -521,7 +521,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     final respuestas = eval['respuestas'];
                     if (respuestas == null || (respuestas as Map).isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(

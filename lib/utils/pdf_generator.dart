@@ -214,7 +214,7 @@ class PdfGenerator {
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: pw.BoxDecoration(
-                color: (badgeColor ?? primaryColor).flatten(background: PdfColors.white, amount: 0.12),
+                color: surfaceLow,
                 borderRadius: pw.BorderRadius.circular(6),
                 border: pw.Border.all(color: badgeColor ?? primaryColor, width: 0.8),
               ),
@@ -436,7 +436,7 @@ class PdfGenerator {
                 width: double.infinity,
                 padding: const pw.EdgeInsets.all(10),
                 decoration: pw.BoxDecoration(
-                  color: scoreColor.flatten(background: PdfColors.white, amount: 0.1),
+                  color: surfaceLow,
                   borderRadius: pw.BorderRadius.circular(6),
                   border: pw.Border.all(color: scoreColor, width: 0.8),
                 ),
