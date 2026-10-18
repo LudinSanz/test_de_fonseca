@@ -964,7 +964,7 @@ class _ExpedienteResumenSheetState extends State<_ExpedienteResumenSheet> {
                             ? 'Medicamentos: ${ultimaReceta['medicamentos'] ?? ''}\nIndicaciones: ${ultimaReceta['indicaciones'] ?? ''}'
                             : 'Sin recetas prescritas',
                         estado: ultimaReceta != null ? (ultimaReceta['fecha'] ?? 'Reciente') : null,
-                        color: AppColors.tertiary,
+                        color: AppColors.info,
                       ),
                       const SizedBox(height: 10),
 
