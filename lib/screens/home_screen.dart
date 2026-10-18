@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
@@ -17,6 +17,7 @@ import 'patient_history_screen.dart';
 import 'patient_directory_screen.dart';
 import 'treatments_screen.dart';
 import 'messages_screen.dart';
+import 'notifications_screen.dart';
 import '../models/paciente.dart';
 import '../services/firestore_service.dart';
 import '../services/supabase_service.dart';
@@ -225,7 +226,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ]),
         ]),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined, color: AppColors.primary), onPressed: () {}),
+          IconButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_outlined, color: AppColors.primary, size: 24),
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 8, minHeight: 8),
+                  ),
+                ),
+              ],
+            ),
+            tooltip: 'Centro de Notificaciones y Alertas',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: AppColors.primary),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
