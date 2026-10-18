@@ -699,7 +699,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
           _buildCardSection(
             titulo: '3. Motivo de Consulta y Evaluación Específica',
             subtitulo: 'Selecciona el motivo principal para ver las preguntas clínicas relacionadas',
-            icono: Icons.stethoscope,
+            icono: Icons.medical_services_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
