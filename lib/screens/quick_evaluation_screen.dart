@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/signature_pad.dart';
+import '../widgets/patient_search_selector.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
@@ -428,19 +429,11 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
                           ),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<Paciente>(
-                            value: _pacienteSeleccionado,
-                            decoration: _inputDecoration('Seleccionar Paciente de la Lista'),
-                            dropdownColor: AppColors.surfaceContainerLowest,
-                            items: _pacientes.map((p) {
-                              return DropdownMenuItem<Paciente>(
-                                value: p,
-                                child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _pacienteSeleccionado = val);
-                            },
+                          PatientSearchSelector(
+                            selectedPatient: _pacienteSeleccionado,
+                            patients: _pacientes,
+                            label: 'Buscar Paciente (con Lupa 🔍)',
+                            onPatientSelected: (p) => setState(() => _pacienteSeleccionado = p),
                           ),
                         ],
                       ),

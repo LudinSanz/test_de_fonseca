@@ -5,6 +5,7 @@ import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
 import '../services/supabase_service.dart';
 import '../widgets/signature_pad.dart';
+import '../widgets/patient_search_selector.dart';
 
 class FonsecaTestScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -450,19 +451,11 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textLight),
                           ),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<Paciente>(
-                            value: _pacienteSeleccionado,
-                            decoration: _inputDecoration('Seleccionar Paciente'),
-                            dropdownColor: AppColors.surfaceContainerLowest,
-                            items: _pacientes.map((p) {
-                              return DropdownMenuItem<Paciente>(
-                                value: p,
-                                child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _pacienteSeleccionado = val);
-                            },
+                          PatientSearchSelector(
+                            selectedPatient: _pacienteSeleccionado,
+                            patients: _pacientes,
+                            label: 'Buscar Paciente (con Lupa 🔍)',
+                            onPatientSelected: (p) => setState(() => _pacienteSeleccionado = p),
                           ),
                           const SizedBox(height: 16),
                           Row(

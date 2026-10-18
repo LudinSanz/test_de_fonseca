@@ -6,6 +6,7 @@ import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/signature_pad.dart';
+import '../widgets/patient_search_selector.dart';
 import '../services/supabase_service.dart';
 
 class PrescriptionScreen extends StatefulWidget {
@@ -345,17 +346,11 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                         children: [
                           const Text('1. Paciente Destinatario:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<Paciente>(
-                            value: _pacienteSeleccionado,
-                            decoration: _inputDecoration('Seleccionar Paciente de la Clínica'),
-                            dropdownColor: AppColors.surfaceContainerLowest,
-                            items: _pacientes.map((p) {
-                              return DropdownMenuItem(
-                                value: p,
-                                child: Text('${p.nombre} ${p.apellido} (${p.telefono})'),
-                              );
-                            }).toList(),
-                            onChanged: (val) => setState(() => _pacienteSeleccionado = val),
+                          PatientSearchSelector(
+                            selectedPatient: _pacienteSeleccionado,
+                            patients: _pacientes,
+                            label: 'Buscar Paciente por Nombre o Teléfono 🔍',
+                            onPatientSelected: (p) => setState(() => _pacienteSeleccionado = p),
                           ),
                         ],
                       ),

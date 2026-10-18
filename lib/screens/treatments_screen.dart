@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/pdf_generator.dart';
 import '../widgets/signature_pad.dart';
+import '../widgets/patient_search_selector.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
@@ -1134,63 +1135,20 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // Patient Selector Card
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(color: AppColors.shadowSoft, blurRadius: 18, offset: Offset(0, 6)),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Paciente Seleccionado:',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textLight),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.ghostOutline, width: 1.0),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<Paciente>(
-                              value: _pacienteSeleccionado,
-                              isExpanded: true,
-                              icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
-                              items: _pacientes.map((p) {
-                                return DropdownMenuItem<Paciente>(
-                                  value: p,
-                                  child: Text(
-                                    '${p.nombre} ${p.apellido} • Tel: ${p.telefono}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: AppColors.onSurface,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (p) {
-                                if (p != null) {
-                                  setState(() => _pacienteSeleccionado = p);
-                                  _cargarTratamientosDelPaciente(p.id);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                  // Patient Selector with Lupa
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: PatientSearchSelector(
+                      selectedPatient: _pacienteSeleccionado,
+                      patients: _pacientes,
+                      label: 'Paciente en Tratamiento (Búsqueda con Lupa 🔍):',
+                      onPatientSelected: (p) {
+                        setState(() => _pacienteSeleccionado = p);
+                        _cargarTratamientosDelPaciente(p.id);
+                      },
                     ),
                   ),
 

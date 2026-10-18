@@ -48,38 +48,45 @@ class _SignatureCanvasWidgetState extends State<SignatureCanvasWidget> {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.ghostOutline, width: 1.2),
+        border: Border.all(color: AppColors.primary.withOpacity(0.35), width: 1.4),
       ),
       child: Stack(
         children: [
-          GestureDetector(
-            onPanStart: (details) {
-              final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
-              if (renderBox != null) {
-                final Offset localPos = renderBox.globalToLocal(details.globalPosition);
-                widget.onPanUpdate?.call(localPos);
-              }
-            },
-            onPanUpdate: (details) {
-              final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
-              if (renderBox != null) {
-                final Offset localPos = renderBox.globalToLocal(details.globalPosition);
-                widget.onPanUpdate?.call(localPos);
-              }
-            },
-            onPanEnd: (details) {
-              widget.onPanEnd?.call();
-            },
-            child: CustomPaint(
-              painter: SignaturePainter(widget.points),
-              size: Size.infinite,
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanStart: (details) {
+                final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+                if (renderBox != null) {
+                  final Offset localPos = renderBox.globalToLocal(details.globalPosition);
+                  widget.onPanUpdate?.call(localPos);
+                }
+              },
+              onPanUpdate: (details) {
+                final RenderBox? renderBox = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+                if (renderBox != null) {
+                  final Offset localPos = renderBox.globalToLocal(details.globalPosition);
+                  widget.onPanUpdate?.call(localPos);
+                }
+              },
+              onPanEnd: (details) {
+                widget.onPanEnd?.call();
+              },
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: SignaturePainter(List<Offset?>.from(widget.points)),
+                  size: Size.infinite,
+                ),
+              ),
             ),
           ),
           if (!_hasSignature)
-            Center(
-              child: Text(
-                widget.placeholder ?? 'Trace su firma aquí con el dedo o lápiz táctil ✍️',
-                style: const TextStyle(color: AppColors.textLight, fontSize: 13, fontStyle: FontStyle.italic),
+            IgnorePointer(
+              child: Center(
+                child: Text(
+                  widget.placeholder ?? 'Trace su firma aquí con el dedo o lápiz táctil ✍️',
+                  style: const TextStyle(color: AppColors.textLight, fontSize: 13, fontStyle: FontStyle.italic),
+                ),
               ),
             ),
           if (_hasSignature)
@@ -282,17 +289,18 @@ class SignaturePainter extends CustomPainter {
     final Paint paint = Paint()
       ..color = AppColors.primary
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..strokeWidth = 3.5;
 
     for (int i = 0; i < points.length - 1; i++) {
       if (points[i] != null && points[i + 1] != null) {
         canvas.drawLine(points[i]!, points[i + 1]!, paint);
       } else if (points[i] != null && points[i + 1] == null) {
-        canvas.drawPoints(ui.PointMode.points, [points[i]!], paint);
+        canvas.drawCircle(points[i]!, 2.0, paint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(SignaturePainter oldDelegate) => oldDelegate.points != points;
+  bool shouldRepaint(covariant SignaturePainter oldDelegate) => true;
 }

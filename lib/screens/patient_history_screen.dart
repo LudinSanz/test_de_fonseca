@@ -7,6 +7,7 @@ import '../constants/colors.dart';
 import '../utils/pdf_generator.dart';
 import '../services/supabase_service.dart';
 import '../widgets/signature_pad.dart';
+import '../widgets/patient_search_selector.dart';
 import 'fonseca_test_screen.dart';
 import 'appointments_screen.dart';
 import 'prescription_screen.dart';
@@ -179,48 +180,14 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Seleccionar Expediente del Paciente',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textLight,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.ghostOutline, width: 1.0),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Paciente>(
-                            value: _pacienteSeleccionado,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
-                            items: _pacientes.map((p) {
-                              return DropdownMenuItem<Paciente>(
-                                value: p,
-                                child: Text(
-                                  '${p.nombre} ${p.apellido} • Tel: ${p.telefono}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: AppColors.onSurface,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (p) {
-                              if (p != null) {
-                                setState(() => _pacienteSeleccionado = p);
-                                _cargarHistorialPaciente(p);
-                              }
-                            },
-                          ),
-                        ),
+                      PatientSearchSelector(
+                        selectedPatient: _pacienteSeleccionado,
+                        patients: _pacientes,
+                        label: 'Buscar Expediente de Paciente (con Lupa 🔍)',
+                        onPatientSelected: (p) {
+                          setState(() => _pacienteSeleccionado = p);
+                          _cargarHistorialPaciente(p);
+                        },
                       ),
                     ],
                   ),
