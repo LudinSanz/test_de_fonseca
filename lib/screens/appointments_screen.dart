@@ -427,12 +427,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       buffer.writeln('📅 *CONFIRMACIÓN DE CITA - Rizo Dental*');
       buffer.writeln('Estimado/a $nombre, su cita ha sido agendada con éxito:');
     }
-    buffer.writeln('
-📋 *Motivo / Procedimiento:* $motivo');
+    buffer.writeln();
+    buffer.writeln('📋 *Motivo / Procedimiento:* $motivo');
     buffer.writeln('⏰ *Horario:* $fechaStr');
     buffer.writeln('📍 *Ubicación:* Clínica Rizo Dental, Ciudad de Guatemala (+502 5981-6632)');
-    buffer.writeln('
-_Por favor responder a este mensaje con un *"Confirmado"* para asegurar su espacio._');
+    buffer.writeln();
+    buffer.writeln('_Por favor responder a este mensaje con un *"Confirmado"* para asegurar su espacio._');
 
     final cleanPhone = tel.replaceAll(RegExp(r'[^\d+]'), '');
     final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
