@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/pdf_generator.dart';
+import '../widgets/signature_pad.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
@@ -156,6 +159,62 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
         'Cualquier duda estamos a sus órdenes en Rizo Dental (+502 5981-6632).';
 
     _abrirWhatsApp(_pacienteSeleccionado!.telefono, msg);
+  }
+
+  
+  Future<void> _exportarPlanTratamientoPdf() async {
+    if (_pacienteSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor seleccione un paciente para exportar su plan de tratamiento.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    final firmaData = await SignaturePadDialog.pedirFirma(
+      context,
+      tituloDocumento: 'Plan de Tratamiento & Presupuesto (GTQ)',
+    );
+
+    if (firmaData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se requiere la firma del odontólogo para validar y dar vigencia legal al Plan de Tratamiento.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
+      final doctorInfo = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+      await PdfGenerator.generarPdfTratamientos(
+        paciente: _pacienteSeleccionado!,
+        tratamientosGenerales: _tratamientosGenerales,
+        tratamientosEstetica: _tratamientosEstetica,
+        odontograma: _odontogramState,
+        doctorInfo: doctorInfo,
+        signaturePngBytes: firmaData.pngBytes,
+      );
+    } catch (e) {
+      debugPrint('Error al generar PDF de tratamientos: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al exportar documento: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   // ==================== CÁLCULOS FINANCIEROS ====================
@@ -1549,6 +1608,21 @@ class _TreatmentsScreenState extends State<TreatmentsScreen> with SingleTickerPr
               Align(
                 alignment: Alignment.centerRight,
                 child: Text('${(progresoPago * 100).toStringAsFixed(0)}% cubierto', style: const TextStyle(color: Colors.white70, fontSize: 10)),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _exportarPlanTratamientoPdf,
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
+                  label: const Text('Exportar Plan y Presupuesto Oficial (PDF)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
               ),
             ],
           ),

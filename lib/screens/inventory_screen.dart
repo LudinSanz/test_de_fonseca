@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../services/supabase_service.dart';
+import '../utils/pdf_generator.dart';
+import '../widgets/signature_pad.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -34,6 +36,59 @@ class _InventoryScreenState extends State<InventoryScreen> {
       debugPrint('Error al cargar inventario: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  
+  Future<void> _exportarInventarioPdf() async {
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay ítems registrados en el inventario para exportar.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    final firmaData = await SignaturePadDialog.pedirFirma(
+      context,
+      tituloDocumento: 'Auditoría & Inventario Clínico Rizo Dental',
+    );
+
+    if (firmaData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se requiere la firma del odontólogo para validar y certificar la auditoría del inventario.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final supabaseService = SupabaseService();
+      String emailOrId = '';
+      try {
+        final u = Supabase.instance.client.auth.currentUser;
+        if (u != null) emailOrId = u.email ?? u.id;
+      } catch (_) {}
+      final doctorInfo = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+      await PdfGenerator.generarPdfInventario(
+        items: _items,
+        doctorInfo: doctorInfo,
+        signaturePngBytes: firmaData.pngBytes,
+      );
+    } catch (e) {
+      debugPrint('Error al generar PDF de inventario: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al exportar inventario: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 
@@ -208,6 +263,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.primary),
+            tooltip: 'Exportar Reporte de Inventario (PDF)',
+            onPressed: _exportarInventarioPdf,
+          ),
           IconButton(
             icon: const Icon(Icons.add, color: AppColors.primary, size: 28),
             onPressed: () => _abrirModalAgregarEditar(),

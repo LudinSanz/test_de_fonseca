@@ -1,6 +1,18 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../utils/pdf_generator.dart';
+
+class DoctorSignatureData {
+  final String textFirma;
+  final Uint8List? pngBytes;
+
+  DoctorSignatureData({
+    required this.textFirma,
+    this.pngBytes,
+  });
+}
 
 class SignatureCanvasWidget extends StatefulWidget {
   final List<Offset?> points;
@@ -66,7 +78,7 @@ class _SignatureCanvasWidgetState extends State<SignatureCanvasWidget> {
           if (!_hasSignature)
             Center(
               child: Text(
-                widget.placeholder ?? 'Firme aquí con el dedo o lápiz ✍️',
+                widget.placeholder ?? 'Trace su firma aquí con el dedo o lápiz táctil ✍️',
                 style: const TextStyle(color: AppColors.textLight, fontSize: 13, fontStyle: FontStyle.italic),
               ),
             ),
@@ -89,12 +101,31 @@ class _SignatureCanvasWidgetState extends State<SignatureCanvasWidget> {
 class SignaturePadDialog extends StatefulWidget {
   final String doctorName;
   final String doctorColegiado;
+  final String tituloDocumento;
 
   const SignaturePadDialog({
     super.key,
     required this.doctorName,
     required this.doctorColegiado,
+    this.tituloDocumento = 'Documento Clínico Oficial',
   });
+
+  static Future<DoctorSignatureData?> pedirFirma(
+    BuildContext context, {
+    String doctorName = 'Dr. Ludin Solís',
+    String doctorColegiado = '98421',
+    String tituloDocumento = 'Documento Clínico Oficial',
+  }) async {
+    return await showDialog<DoctorSignatureData>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => SignaturePadDialog(
+        doctorName: doctorName,
+        doctorColegiado: doctorColegiado,
+        tituloDocumento: tituloDocumento,
+      ),
+    );
+  }
 
   @override
   State<SignaturePadDialog> createState() => _SignaturePadDialogState();
@@ -102,6 +133,7 @@ class SignaturePadDialog extends StatefulWidget {
 
 class _SignaturePadDialogState extends State<SignaturePadDialog> {
   final List<Offset?> _points = [];
+  bool _procesandoFirma = false;
 
   void _clearSignature() {
     setState(() {
@@ -110,6 +142,30 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
   }
 
   bool get _hasSignature => _points.where((p) => p != null).isNotEmpty;
+
+  Future<void> _confirmarFirma() async {
+    setState(() => _procesandoFirma = true);
+    try {
+      Uint8List? pngBytes;
+      if (_hasSignature) {
+        pngBytes = await PdfGenerator.signaturePointsToPngBytes(_points);
+      }
+      final textFirma = 'Firma y Sello Oficial del Dr. ${widget.doctorName} (Colegiado #${widget.doctorColegiado})';
+      
+      if (!mounted) return;
+      Navigator.pop(
+        context,
+        DoctorSignatureData(
+          textFirma: textFirma,
+          pngBytes: pngBytes,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _procesandoFirma = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +185,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'Firma Digital del Especialista',
+              'Firma Requerida del Especialista',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
             ),
           ),
@@ -140,23 +196,39 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Documento: ${widget.tituloDocumento}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             const Text(
-              'Por favor dibuja tu firma digital en el recuadro para autorizar la prescripción clínica:',
-              style: TextStyle(fontSize: 12, color: AppColors.textLight),
+              'Para que este documento tenga validez legal y clínica oficial, debes firmar en el recuadro antes de exportar o guardar el PDF:',
+              style: TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.3),
             ),
             const SizedBox(height: 12),
             SignatureCanvasWidget(
               points: _points,
               onClear: _clearSignature,
               onPanUpdate: (pos) {
-                setState(() {
-                  _points.add(pos);
-                });
+                setState(() => _points.add(pos));
               },
               onPanEnd: () {
-                setState(() {
-                  _points.add(null);
-                });
+                setState(() => _points.add(null));
               },
             ),
             const SizedBox(height: 12),
@@ -166,7 +238,7 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Dr(a). ${widget.doctorName} • Col. #${widget.doctorColegiado}',
+                    '${widget.doctorName} • Colegiado #${widget.doctorColegiado}',
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
                 ),
@@ -177,21 +249,22 @@ class _SignaturePadDialogState extends State<SignaturePadDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, null),
+          onPressed: _procesandoFirma ? null : () => Navigator.pop(context, null),
           child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
         ),
         ElevatedButton.icon(
-          onPressed: _hasSignature
-              ? () {
-                  final textFirma = 'Firma Digital Dibujada por Dr. ${widget.doctorName} (Colegiado #${widget.doctorColegiado})';
-                  Navigator.pop(context, textFirma);
-                }
-              : null,
-          icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-          label: const Text('Confirmar Firma', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          onPressed: (_hasSignature && !_procesandoFirma) ? _confirmarFirma : null,
+          icon: _procesandoFirma
+              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+          label: Text(
+            _procesandoFirma ? 'Procesando...' : 'Autorizar y Generar PDF',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
       ],

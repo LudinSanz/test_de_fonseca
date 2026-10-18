@@ -6,6 +6,7 @@ import '../models/examen_clinico.dart';
 import '../constants/colors.dart';
 import '../utils/pdf_generator.dart';
 import '../services/supabase_service.dart';
+import '../widgets/signature_pad.dart';
 import 'fonseca_test_screen.dart';
 import 'appointments_screen.dart';
 import 'prescription_screen.dart';
@@ -532,6 +533,18 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                       return;
                     }
 
+                    final firmaData = await SignaturePadDialog.pedirFirma(
+                      context,
+                      tituloDocumento: 'Evaluación Clínica Odontológica',
+                    );
+                    if (firmaData == null) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Se requiere la firma del odontólogo para generar el documento.'), backgroundColor: AppColors.error),
+                        );
+                      }
+                      return;
+                    }
                     PdfGenerator.generarPdfEvaluacionClinica(
                       paciente: _pacienteSeleccionado!,
                       evaluacion: eval,
@@ -541,6 +554,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                         'especialidad': 'Especialista ATM & Odontología',
                         'firma_digital': 'Firma Digital Rizo Dental',
                       },
+                      signaturePngBytes: firmaData.pngBytes,
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
@@ -626,7 +640,19 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
+                    final firmaData = await SignaturePadDialog.pedirFirma(
+                      context,
+                      tituloDocumento: 'Receta Médica Odontológica',
+                    );
+                    if (firmaData == null) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Se requiere la firma del odontólogo para certificar la receta médica.'), backgroundColor: AppColors.error),
+                        );
+                      }
+                      return;
+                    }
                     PdfGenerator.generarPdfReceta(
                       paciente: _pacienteSeleccionado!,
                       medicamentos: [
@@ -644,6 +670,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                         'especialidad': 'Especialista ATM & Odontología',
                         'firma_digital': 'Firma Digital Rizo Dental',
                       },
+                      signatureImageBytes: firmaData.pngBytes,
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
@@ -731,7 +758,19 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
+                    final firmaData = await SignaturePadDialog.pedirFirma(
+                      context,
+                      tituloDocumento: 'Comprobante Oficial de Cita',
+                    );
+                    if (firmaData == null) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Se requiere la firma del odontólogo para validar el comprobante de cita.'), backgroundColor: AppColors.error),
+                        );
+                      }
+                      return;
+                    }
                     PdfGenerator.generarPdfCita(
                       paciente: _pacienteSeleccionado!,
                       fechaHora: '$fecha a las $hora',
@@ -744,6 +783,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Single
                         'especialidad': 'Especialista ATM & Odontología',
                         'firma_digital': 'Firma Digital Rizo Dental',
                       },
+                      signaturePngBytes: firmaData.pngBytes,
                     );
                   },
                   icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),

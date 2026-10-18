@@ -5,6 +5,7 @@ import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
 import '../services/supabase_service.dart';
+import '../widgets/signature_pad.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -249,6 +250,23 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final dt = DateTime.tryParse(cita['fecha_hora'] ?? '') ?? DateTime.now();
     final fechaHoraStr = '${dt.day}/${dt.month}/${dt.year} - ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
 
+    final firmaData = await SignaturePadDialog.pedirFirma(
+      context,
+      tituloDocumento: 'Comprobante Oficial de Cita',
+    );
+
+    if (firmaData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se requiere la firma del odontólogo para validar y emitir el comprobante de cita.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     await PdfGenerator.generarPdfCita(
       paciente: paciente,
       fechaHora: fechaHoraStr,
@@ -256,6 +274,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       notas: cita['notas'] ?? '',
       estado: cita['estado'] ?? 'Programada',
       doctorInfo: doctorRes,
+      signaturePngBytes: firmaData.pngBytes,
     );
   }
 

@@ -4,6 +4,7 @@ import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../utils/pdf_generator.dart';
 import '../services/supabase_service.dart';
+import '../widgets/signature_pad.dart';
 
 class FonsecaTestScreen extends StatefulWidget {
   final Paciente? pacienteInicial;
@@ -326,6 +327,23 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
   }
 
   void _generatePdf(int score, String diagnosis) async {
+    final firmaData = await SignaturePadDialog.pedirFirma(
+      context,
+      tituloDocumento: 'Evaluación ATM (Test de Fonseca)',
+    );
+
+    if (firmaData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se requiere la firma del odontólogo para certificar la evaluación ATM.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     final supabase = Supabase.instance.client;
     final doctorRes = await supabase.from('users').select().eq('email', supabase.auth.currentUser?.email ?? '').maybeSingle();
 
@@ -336,6 +354,7 @@ class _FonsecaTestScreenState extends State<FonsecaTestScreen> {
         diagnostico: diagnosis,
         preguntas: _questions,
         doctorInfo: doctorRes,
+        signaturePngBytes: firmaData.pngBytes,
       );
     }
   }

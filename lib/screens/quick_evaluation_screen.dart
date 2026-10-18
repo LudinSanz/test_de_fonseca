@@ -3,6 +3,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/pdf_generator.dart';
+import '../widgets/signature_pad.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
@@ -266,6 +268,48 @@ class _QuickEvaluationScreenState extends State<QuickEvaluationScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Botón Exportar Nota de Consulta PDF con Firma Obligatoria
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.primary),
+                label: const Text('Exportar Nota Oficial (PDF)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary, width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () async {
+                  final firmaData = await SignaturePadDialog.pedirFirma(
+                    context,
+                    tituloDocumento: 'Nota de Consulta Clínica',
+                  );
+                  if (firmaData == null) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Se requiere la firma del odontólogo para emitir la nota de consulta.'), backgroundColor: AppColors.error),
+                      );
+                    }
+                    return;
+                  }
+                  String emailOrId = '';
+                  try {
+                    final u = Supabase.instance.client.auth.currentUser;
+                    if (u != null) emailOrId = u.email ?? u.id;
+                  } catch (_) {}
+                  final doctorInfo = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+                  await PdfGenerator.generarPdfEvaluacionClinica(
+                    paciente: _pacienteSeleccionado!,
+                    evaluacion: evaluacionData,
+                    doctorInfo: doctorInfo,
+                    signaturePngBytes: firmaData.pngBytes,
+                  );
+                },
               ),
             ),
             const SizedBox(height: 8),

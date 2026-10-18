@@ -6,6 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/reporte.dart';
 import '../constants/colors.dart';
 import '../services/supabase_service.dart';
+import '../models/paciente.dart';
+import '../utils/pdf_generator.dart';
+import '../widgets/signature_pad.dart';
 
 class ReportsScreen extends StatefulWidget {
   final List<Reporte>? reportes;
@@ -55,82 +58,63 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _compartirInformePDF(Map<String, dynamic> eval) async {
-    final pdf = pw.Document();
+    final firmaData = await SignaturePadDialog.pedirFirma(
+      context,
+      tituloDocumento: 'Informe Oficial de Evaluación ATM',
+    );
+    if (firmaData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se requiere la firma del odontólogo para emitir y certificar el informe.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
 
-    final String diagnostico = eval['diagnostico'] ?? 'Test de Fonseca';
+    final String diagnostico = eval['diagnostico'] ?? 'Evaluación Clínica ATM';
     final int score = eval['puntuacion'] ?? 0;
     final String pacienteNombre = eval['paciente_nombre'] ?? 'Paciente General';
-    final String fecha = eval['fecha'] != null
-        ? eval['fecha'].toString().split('T')[0]
-        : DateTime.now().toString().split(' ')[0];
+    final String pacienteId = eval['paciente_id'] ?? eval['pacienteId'] ?? 'temp_id';
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(24),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('RIZO DENTAL', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Rizo Dental • Diagnóstico ATM', style: const pw.TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    pw.Text('Fecha: $fecha', style: const pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-                pw.Divider(),
-                pw.SizedBox(height: 16),
-                pw.Text('HISTORIAL CLÍNICO DE EVALUACIÓN', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 12),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(16),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.grey100,
-                    borderRadius: pw.BorderRadius.circular(10),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Paciente: $pacienteNombre', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 6),
-                      pw.Text('Puntuación Anamnésica: $score / 100 Puntos', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 6),
-                      pw.Text('Diagnóstico ATM: $diagnostico', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text('Respuestas del Cuestionario Fonseca:'),
-                pw.SizedBox(height: 10),
-                if (eval['respuestas'] is Map)
-                  for (var entry in (eval['respuestas'] as Map).entries)
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                      child: pw.Text('${entry.key}: ${entry.value}'),
-                    ),
-                pw.Spacer(),
-                pw.Divider(),
-                pw.Center(
-                  child: pw.Text('Rizo Dental • Firma y Sello del Especialista', style: const pw.TextStyle(fontSize: 10)),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+    final paciente = Paciente(
+      id: pacienteId,
+      nombre: pacienteNombre,
+      apellido: '',
+      email: '',
+      telefono: '',
+      fechaNacimiento: DateTime(1995, 1, 1),
+      genero: 'No especificado',
+      direccion: 'Ciudad de Guatemala',
     );
 
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'informe_atm_${eval['id'] ?? "eval"}.pdf',
+    List<Map<String, dynamic>> preguntas = [];
+    if (eval['respuestas'] is Map) {
+      for (var entry in (eval['respuestas'] as Map).entries) {
+        preguntas.add({
+          'question': entry.key.toString(),
+          'answer': entry.value.toString(),
+        });
+      }
+    }
+
+    final supabaseService = SupabaseService();
+    String emailOrId = '';
+    try {
+      final u = Supabase.instance.client.auth.currentUser;
+      if (u != null) emailOrId = u.email ?? u.id;
+    } catch (_) {}
+    final doctorInfo = await supabaseService.obtenerPerfilDoctor(emailOrId);
+
+    await PdfGenerator.generarPdfFonseca(
+      paciente: paciente,
+      score: score,
+      diagnostico: diagnostico,
+      preguntas: preguntas,
+      doctorInfo: doctorInfo,
+      signaturePngBytes: firmaData.pngBytes,
     );
   }
 
