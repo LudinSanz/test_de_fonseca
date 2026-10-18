@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
 import '../models/paciente.dart';
 import '../services/supabase_service.dart';
+import 'patient_directory_screen.dart';
 
 // ============================================================
 // MODELO DE CONVERSACION
@@ -609,58 +610,484 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
-  // ---- INFO PACIENTE ----
+  // ---- INFO PACIENTE / EXPEDIENTE RESUMEN ----
   void _mostrarInfoPaciente(Paciente p) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary,
-              child: Text('${p.nombre[0]}${p.apellido.isNotEmpty ? p.apellido[0] : ''}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ExpedienteResumenSheet(
+        paciente: p,
+        db: _db,
+        onAbrirAccionesRapidas: () => _mostrarAccionesRapidas(p),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MODAL EXPEDIENTE RESUMEN (ÚLTIMO PROCEDIMIENTO Y ACTIVIDAD)
+// ============================================================
+class _ExpedienteResumenSheet extends StatefulWidget {
+  final Paciente paciente;
+  final SupabaseService db;
+  final VoidCallback onAbrirAccionesRapidas;
+
+  const _ExpedienteResumenSheet({
+    required this.paciente,
+    required this.db,
+    required this.onAbrirAccionesRapidas,
+  });
+
+  @override
+  State<_ExpedienteResumenSheet> createState() => _ExpedienteResumenSheetState();
+}
+
+class _ExpedienteResumenSheetState extends State<_ExpedienteResumenSheet> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _tratamientos = [];
+  List<Map<String, dynamic>> _citas = [];
+  List<Map<String, dynamic>> _recetas = [];
+  List<Map<String, dynamic>> _evaluaciones = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarExpediente();
+  }
+
+  Future<void> _cargarExpediente() async {
+    try {
+      final results = await Future.wait([
+        widget.db.obtenerTratamientos(pacienteId: widget.paciente.id),
+        widget.db.obtenerCitas(pacienteId: widget.paciente.id),
+        widget.db.obtenerRecetas(pacienteId: widget.paciente.id),
+        widget.db.obtenerEvaluaciones(pacienteId: widget.paciente.id),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _tratamientos = results[0] as List<Map<String, dynamic>>;
+          _citas = results[1] as List<Map<String, dynamic>>;
+          _recetas = results[2] as List<Map<String, dynamic>>;
+          _evaluaciones = results[3] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  int _calcularEdad(DateTime fecha) {
+    final now = DateTime.now();
+    int edad = now.year - fecha.year;
+    if (now.month < fecha.month || (now.month == fecha.month && now.day < fecha.day)) {
+      edad--;
+    }
+    return edad < 0 ? 0 : edad;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.paciente;
+    final edad = _calcularEdad(p.fechaNacimiento);
+
+    // Obtener último procedimiento / tratamiento
+    Map<String, dynamic>? ultimoTratamiento = _tratamientos.isNotEmpty ? _tratamientos.first : null;
+    Map<String, dynamic>? ultimaCita = _citas.isNotEmpty ? _citas.first : null;
+    Map<String, dynamic>? ultimaReceta = _recetas.isNotEmpty ? _recetas.first : null;
+    Map<String, dynamic>? ultimaEval = _evaluaciones.isNotEmpty ? _evaluaciones.first : null;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          // Handle superior
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(width: 10),
-            Expanded(child: Text('${p.nombre} ${p.apellido}', style: const TextStyle(fontSize: 15))),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _infoRow(Icons.phone, 'Teléfono', p.telefono),
-            _infoRow(Icons.email_outlined, 'Email', p.email.isNotEmpty ? p.email : 'Sin registro'),
-            _infoRow(Icons.location_on_outlined, 'Dirección', p.direccion.isNotEmpty ? p.direccion : 'Sin registro'),
-            _infoRow(Icons.cake_outlined, 'Fecha Nac.', p.fechaNacimiento.toString().split(' ').first),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-          ElevatedButton.icon(
-            onPressed: () { Navigator.pop(ctx); _mostrarAccionesRapidas(p); },
-            icon: const Icon(Icons.send, size: 14),
-            label: const Text('Enviar Mensaje'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+          ),
+
+          // Encabezado del paciente
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryContainer],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${p.nombre.isNotEmpty ? p.nombre[0].toUpperCase() : ''}${p.apellido.isNotEmpty ? p.apellido[0].toUpperCase() : ''}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${p.nombre} ${p.apellido}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.onSurface),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$edad años (${p.genero}) • Tel: ${p.telefono}',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textLight),
+                      ),
+                      if (p.email.isNotEmpty)
+                        Text(
+                          p.email,
+                          style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: AppColors.textLight),
+                  tooltip: 'Cerrar',
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, thickness: 1, color: AppColors.ghostOutline),
+
+          // Contenido principal
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    children: [
+                      // ── TARJETA DESTACADA: ÚLTIMO PROCEDIMIENTO / TRATAMIENTO REALIZADO ──
+                      const Text(
+                        'ÚLTIMO PROCEDIMIENTO / TRATAMIENTO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      if (ultimoTratamiento != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.2),
+                            boxShadow: const [
+                              BoxShadow(color: AppColors.shadowSoft, blurRadius: 12, offset: Offset(0, 4)),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(Icons.medical_services_rounded, color: AppColors.primary, size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          ultimoTratamiento['tratamiento'] ?? ultimoTratamiento['procedimiento'] ?? 'Procedimiento Dental',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.onSurface),
+                                        ),
+                                        if ((ultimoTratamiento['subtipo'] ?? '').isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            ultimoTratamiento['subtipo'],
+                                            style: const TextStyle(fontSize: 12, color: AppColors.textLight),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  // Badge de estado
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: (ultimoTratamiento['evolucion'] ?? ultimoTratamiento['estado'] ?? 'En Proceso')
+                                              .toString()
+                                              .toLowerCase()
+                                              .contains('complet')
+                                          ? AppColors.success.withOpacity(0.15)
+                                          : AppColors.warning.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      ultimoTratamiento['evolucion'] ?? ultimoTratamiento['estado'] ?? 'En Proceso',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: (ultimoTratamiento['evolucion'] ?? ultimoTratamiento['estado'] ?? 'En Proceso')
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains('complet')
+                                            ? AppColors.success
+                                            : AppColors.warning,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Fecha y notas
+                              Row(
+                                children: [
+                                  const Icon(Icons.event_outlined, size: 14, color: AppColors.textLight),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Fecha: ${ultimoTratamiento['fecha'] ?? 'Reciente'}',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textLight, fontWeight: FontWeight.w500),
+                                  ),
+                                  if (ultimoTratamiento['precio_gtq'] != null) ...[
+                                    const Spacer(),
+                                    Text(
+                                      'Q ${ultimoTratamiento['precio_gtq']}',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if ((ultimoTratamiento['notas'] ?? ultimoTratamiento['observaciones'] ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Observaciones: ${ultimoTratamiento['notas'] ?? ultimoTratamiento['observaciones']}',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.onSurface, height: 1.4),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppColors.ghostOutline),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, color: AppColors.textLight, size: 20),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Aún no hay procedimientos o tratamientos registrados para este paciente.',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+
+                      // ── RESUMEN DE ACTIVIDAD CLÍNICA ──
+                      const Text(
+                        'RESUMEN CLÍNICO RECIENTE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Tarjeta Última Cita
+                      _buildResumenCard(
+                        icon: Icons.calendar_month_outlined,
+                        titulo: 'Última Cita',
+                        detalle: ultimaCita != null
+                            ? '${ultimaCita['fecha'] ?? ''} a las ${ultimaCita['hora'] ?? ''}\nMotivo: ${ultimaCita['motivo'] ?? 'Consulta general'}'
+                            : 'Sin citas registradas',
+                        estado: ultimaCita != null ? (ultimaCita['estado'] ?? 'Programada') : null,
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Tarjeta Última Receta
+                      _buildResumenCard(
+                        icon: Icons.medication_outlined,
+                        titulo: 'Última Receta Médica',
+                        detalle: ultimaReceta != null
+                            ? 'Medicamentos: ${ultimaReceta['medicamentos'] ?? ''}\nIndicaciones: ${ultimaReceta['indicaciones'] ?? ''}'
+                            : 'Sin recetas prescritas',
+                        estado: ultimaReceta != null ? (ultimaReceta['fecha'] ?? 'Reciente') : null,
+                        color: AppColors.tertiary,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Tarjeta Test Fonseca ATM
+                      _buildResumenCard(
+                        icon: Icons.assignment_turned_in_outlined,
+                        titulo: 'Evaluación ATM (Fonseca)',
+                        detalle: ultimaEval != null
+                            ? 'Puntaje: ${ultimaEval['puntaje'] ?? ultimaEval['puntos'] ?? 'N/A'} pts • ${ultimaEval['diagnostico'] ?? ultimaEval['clasificacion'] ?? 'Completado'}'
+                            : 'Sin evaluación ATM realizada',
+                        estado: ultimaEval != null ? (ultimaEval['fecha'] ?? '') : null,
+                        color: AppColors.primary,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // ── BOTÓN ACCESO EXPEDIENTE 360° COMPLETO ──
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context); // Cierra bottom sheet
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (ctx) => PatientDirectoryScreen(selectedPatient: widget.paciente),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.badge_outlined, size: 20),
+                        label: const Text(
+                          'Ver Expediente 360° Completo',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Botón preparar mensaje
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          widget.onAbrirAccionesRapidas();
+                        },
+                        icon: const Icon(Icons.send_rounded, size: 18, color: AppColors.primary),
+                        label: const Text(
+                          'Preparar Recordatorio o Mensaje',
+                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary, width: 1.2),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildResumenCard({
+    required IconData icon,
+    required String titulo,
+    required String detalle,
+    String? estado,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.ghostOutline),
+        boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: Offset(0, 2))],
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.primary),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-              Text(value, style: const TextStyle(fontSize: 13)),
-            ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.onSurface)),
+                    if (estado != null && estado.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          estado,
+                          style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  detalle,
+                  style: const TextStyle(fontSize: 12, color: AppColors.textLight, height: 1.35),
+                ),
+              ],
+            ),
           ),
         ],
       ),

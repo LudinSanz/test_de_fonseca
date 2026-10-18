@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
@@ -24,27 +24,35 @@ import '../constants/colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   final List<Reporte> _reportes = [];
   final FirestoreService _firestoreService = FirestoreService();
   Paciente? _pacienteEjemplo;
-  double _primaryBtnScale = 1.0;
-
-  String _doctorNombre = 'Especialista Odontología';
+  String _doctorNombre = 'Especialista Odontologia';
   String _doctorEmail = 'doctor@rizodental.com';
-  String _doctorEspecialidad = 'Especialista en Disfunción ATM';
+  String _doctorEspecialidad = 'Especialista en Disfuncion ATM';
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _cargarPacienteEjemplo();
     _cargarDatosDoctor();
+    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarDatosDoctor() async {
@@ -55,390 +63,146 @@ class _HomeScreenState extends State<HomeScreen> {
         final u = Supabase.instance.client.auth.currentUser;
         if (u != null) emailOrId = u.email ?? u.id;
       } catch (_) {}
-
       final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
-      if (data != null) {
+      if (data != null && mounted) {
         setState(() {
-          if (data['name'] != null && data['name'].toString().isNotEmpty) {
-            _doctorNombre = data['name'];
-          }
-          if (data['email'] != null && data['email'].toString().isNotEmpty) {
-            _doctorEmail = data['email'];
-          }
-          if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) {
-            _doctorEspecialidad = data['especialidad'];
-          }
+          if (data['name'] != null && data['name'].toString().isNotEmpty) _doctorNombre = data['name'];
+          if (data['email'] != null && data['email'].toString().isNotEmpty) _doctorEmail = data['email'];
+          if (data['especialidad'] != null && data['especialidad'].toString().isNotEmpty) _doctorEspecialidad = data['especialidad'];
         });
       }
     } catch (e) {
-      debugPrint('Error al cargar datos del doctor en HomeScreen: $e');
+      debugPrint('Error al cargar datos del doctor: $e');
     }
   }
 
   Future<void> _cargarPacienteEjemplo() async {
-    const pacienteId = 'paciente_demo';
-    Paciente? paciente = await _firestoreService.obtenerPaciente(pacienteId);
-    setState(() {
-      _pacienteEjemplo = paciente;
-    });
+    Paciente? paciente = await _firestoreService.obtenerPaciente('paciente_demo');
+    if (mounted) setState(() => _pacienteEjemplo = paciente);
   }
 
   Future<void> _guardarPacienteEjemplo() async {
-    const pacienteId = 'paciente_demo';
     Paciente paciente = Paciente(
-      id: pacienteId,
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      email: 'juan.perez@email.com',
-      telefono: '555-1234',
-      fechaNacimiento: DateTime(1990, 5, 20),
-      genero: 'Masculino',
-      direccion: 'Ciudad de Guatemala',
+      id: 'paciente_demo', nombre: 'Juan', apellido: 'Perez',
+      email: 'juan.perez@email.com', telefono: '555-1234',
+      fechaNacimiento: DateTime(1990, 5, 20), genero: 'Masculino', direccion: 'Ciudad de Guatemala',
     );
     await _firestoreService.guardarPaciente(paciente);
-    setState(() {
-      _pacienteEjemplo = paciente;
-    });
     if (mounted) {
+      setState(() => _pacienteEjemplo = paciente);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Paciente de ejemplo sincronizado en Supabase'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Paciente sincronizado'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
       );
     }
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
+    setState(() => _selectedIndex = index);
     switch (index) {
-      case 0:
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const TreatmentsScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MessagesScreen()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
+      case 0: break;
+      case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentsScreen())); break;
+      case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const TreatmentsScreen())); break;
+      case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const MessagesScreen())); break;
+      case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())); break;
     }
   }
 
-  void _abrirChatWhatsAppClinica() async {
-    try {
-      final supabaseService = SupabaseService();
-      String emailOrId = '';
-      try {
-        final u = Supabase.instance.client.auth.currentUser;
-        if (u != null) emailOrId = u.email ?? u.id;
-      } catch (_) {}
-
-      final data = await supabaseService.obtenerPerfilDoctor(emailOrId);
-      final String tel = data?['telefono_whatsapp_clinica'] ?? data?['telefono'] ?? '+502 5981-6632';
-      final cleanTel = tel.replaceAll(RegExp(r'[^\d+]'), '');
-
-      final uri = Uri.parse('https://wa.me/$cleanTel?text=Hola%20Rizo%20Dental%20Sanctuary%2C%20deseo%20realizar%20una%20consulta.');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      debugPrint('Error al abrir WhatsApp: $e');
+  void _startFonsecaTest() async {
+    final result = await Navigator.push<Map<String, dynamic>>(context, MaterialPageRoute(builder: (_) => const FonsecaTestScreen()));
+    if (result != null && result.containsKey('score') && result.containsKey('diagnosis')) {
+      setState(() {
+        _reportes.add(Reporte(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          pacienteId: _pacienteEjemplo?.id ?? 'desconocido',
+          fecha: DateTime.now(), tipo: 'fonseca',
+          contenido: 'Puntuacion: ${result["score"]}, Diagnostico: ${result["diagnosis"]}',
+        ));
+      });
     }
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Cerrar Sesion', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+        content: const Text('Deseas salir?', style: TextStyle(color: AppColors.textLight)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight))),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text('Cerrar Sesion'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEvaluationOptions() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(28),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowSoft,
-                blurRadius: 24,
-                offset: Offset(0, -8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.ghostOutline,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Opciones de Evaluación',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Selecciona el tipo de diagnóstico a realizar',
-                style: TextStyle(fontSize: 13, color: AppColors.textLight),
-              ),
-              const SizedBox(height: 24),
-              
-              // Evaluation Card 0: Registrar Paciente
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
-                  ),
-                  title: const Text(
-                    'Registrar Nuevo Paciente',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                  ),
-                  subtitle: const Text(
-                    'Crear expediente clínico de 3 pasos en Supabase',
-                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    final paciente = await Navigator.push<Paciente>(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PatientRegisterScreen()),
-                    );
-                    if (paciente != null) {
-                      setState(() {
-                        _pacienteEjemplo = paciente;
-                      });
-                    }
-                  },
-                ),
-              ),
-
-              // Evaluation Card 1
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.assessment_outlined, color: AppColors.primaryContainer),
-                  ),
-                  title: const Text(
-                    'Test de Fonseca (ATM)',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                  ),
-                  subtitle: const Text(
-                    'Evaluación clínica de disfunción temporomandibular',
-                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _startFonsecaTest();
-                  },
-                ),
-              ),
-
-              // Evaluation Card 2: Evaluación Rápida
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.speed_outlined, color: AppColors.primary),
-                  ),
-                  title: const Text(
-                    'Consulta Clínica',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                  ),
-                  subtitle: const Text(
-                    'Screening exprés de 5 factores de riesgo en consulta',
-                    style: TextStyle(fontSize: 12, color: AppColors.textLight),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const QuickEvaluationScreen()),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showReports() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReportsScreen(reportes: _reportes),
-      ),
-    );
-  }
-
-  void _addReport(int score, String diagnosis) {
-    setState(() {
-      _reportes.add(
-        Reporte(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          pacienteId: _pacienteEjemplo?.id ?? 'desconocido',
-          fecha: DateTime.now(),
-          tipo: 'fonseca',
-          contenido: 'Puntuación: $score, Diagnóstico: $diagnosis',
-        ),
-      );
-    });
-  }
-
-  void _startFonsecaTest() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const FonsecaTestScreen(),
-      ),
-    );
-    if (result != null &&
-        result.containsKey('score') &&
-        result.containsKey('diagnosis')) {
-      _addReport(result['score'], result['diagnosis']);
-    }
-  }
-
-  void _showSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
-  }
-
-  void _showFeatureInDevelopment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🚧 Función clínica en desarrollo'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _logout() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerLowest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Cerrar Sesión',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.onSurface,
-            ),
-          ),
-          content: const Text(
-            '¿Estás seguro de que deseas salir del Santuario Clínico?',
-            style: TextStyle(color: AppColors.textLight),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(color: AppColors.textLight),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (Route<dynamic> route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Cerrar Sesión'),
-            ),
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+        decoration: const BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.ghostOutline, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            const Text('Nueva Accion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.onSurface)),
+            const Text('Selecciona lo que deseas hacer', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+            const SizedBox(height: 20),
+            _sheetOpt(Icons.person_add_alt_1_outlined, AppColors.primary, 'Registrar Nuevo Paciente', 'Crear expediente en Supabase', () async {
+              Navigator.pop(ctx);
+              final p = await Navigator.push<Paciente>(context, MaterialPageRoute(builder: (_) => const PatientRegisterScreen()));
+              if (p != null) setState(() => _pacienteEjemplo = p);
+            }),
+            const SizedBox(height: 10),
+            _sheetOpt(Icons.assessment_outlined, Color(0xFF4A6FA5), 'Test de Fonseca (ATM)', 'Evaluacion de disfuncion temporomandibular', () { Navigator.pop(ctx); _startFonsecaTest(); }),
+            const SizedBox(height: 10),
+            _sheetOpt(Icons.speed_outlined, Color(0xFF007A78), 'Consulta Clinica Rapida', 'Screening expres de 5 factores', () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickEvaluationScreen())); }),
+            const SizedBox(height: 10),
+            _sheetOpt(Icons.folder_shared_outlined, Color(0xFF983C00), 'Directorio & Expediente 360', 'Ver historial completo de pacientes', () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientDirectoryScreen())); }),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetOpt(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+        child: Row(children: [
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 22)),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onSurface)),
+            const SizedBox(height: 2),
+            Text(sub, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+          ])),
+          const Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
+        ]),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String nombreUsuario = _pacienteEjemplo != null
-        ? '${_pacienteEjemplo!.nombre} ${_pacienteEjemplo!.apellido}'
-        : 'Dr. Usuario Rizo';
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Buenos dias' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -446,525 +210,214 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0,
         centerTitle: false,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/rizo_logo.png',
-              height: 36,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.medical_services,
-                color: AppColors.primary,
-                size: 28,
-              ),
+        title: Row(children: [
+          Image.asset('assets/images/rizo_logo.png', height: 34, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.medical_services, color: AppColors.primary, size: 22),
             ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'RIZO DENTAL',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: AppColors.primary,
-                  ),
-                ),
-                Text(
-                  'Rizo Dental',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 10),
+          const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('RIZO DENTAL', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: AppColors.primary)),
+            Text('Clinica Dental Especializada', style: TextStyle(fontSize: 10, color: AppColors.textLight)),
+          ]),
+        ]),
         actions: [
+          IconButton(icon: const Icon(Icons.notifications_outlined, color: AppColors.primary), onPressed: () {}),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: AppColors.primary),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: AppColors.surfaceContainerLowest,
-            onSelected: (String value) {
-              switch (value) {
-                case 'profile':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                  );
-                  break;
-                case 'help':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HelpScreen()),
-                  );
-                  break;
-                case 'logout':
-                  _logout();
-                  break;
-              }
+            onSelected: (v) {
+              if (v == 'profile') Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              else if (v == 'help') Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
+              else if (v == 'logout') _logout();
             },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'profile',
-                child: ListTile(
-                  leading: Icon(Icons.person_outline, color: AppColors.primary),
-                  title: Text('Perfil del Especialista'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'help',
-                child: ListTile(
-                  leading: Icon(Icons.help_outline, color: AppColors.primary),
-                  title: Text('Centro de Ayuda'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'profile', child: ListTile(leading: Icon(Icons.person_outline, color: AppColors.primary), title: Text('Perfil del Especialista'), contentPadding: EdgeInsets.zero)),
+              const PopupMenuItem(value: 'help', child: ListTile(leading: Icon(Icons.help_outline, color: AppColors.primary), title: Text('Centro de Ayuda'), contentPadding: EdgeInsets.zero)),
               const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: ListTile(
-                  leading: Icon(Icons.logout, color: AppColors.error),
-                  title: Text(
-                    'Cerrar Sesión',
-                    style: TextStyle(color: AppColors.error),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+              const PopupMenuItem(value: 'logout', child: ListTile(leading: Icon(Icons.logout, color: AppColors.error), title: Text('Cerrar Sesion', style: TextStyle(color: AppColors.error)), contentPadding: EdgeInsets.zero)),
             ],
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Patient & Specialist Profile Card (Asymmetry & Precision Layering)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(24), // xl radius
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.shadowSoft,
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // HERO CARD Doctor
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryContainer], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 10))],
+                  ),
+                  child: Row(children: [
                     Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryContainer],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const CircleAvatar(
-                        radius: 28,
-                        backgroundColor: AppColors.surfaceContainerLow,
-                        child: Icon(
-                          Icons.person,
-                          size: 32,
-                          color: AppColors.primary,
-                        ),
-                      ),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                      child: const CircleAvatar(radius: 28, backgroundColor: Colors.white24, child: Icon(Icons.person, size: 32, color: Colors.white)),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _doctorNombre,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _doctorEmail,
-                            style: const TextStyle(
-                              color: AppColors.textLight,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _doctorEspecialidad,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('$greeting 👋', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(_doctorNombre, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                        child: Text(_doctorEspecialidad, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.sync, color: AppColors.primary),
-                      tooltip: 'Sincronizar Paciente',
-                      onPressed: _guardarPacienteEjemplo,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Clinical Metrics Summary (Precision Layering)
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 20),
-                              ),
-                              Text(
-                                '${_reportes.length}',
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Evaluaciones',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                          ),
-                          const Text(
-                            'Realizadas en la app',
-                            style: TextStyle(fontSize: 11, color: AppColors.textLight),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.health_and_safety_outlined, color: AppColors.success, size: 20),
-                              ),
-                              const Text(
-                                'ATM',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Diagnóstico',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-                          ),
-                          const Text(
-                            'Test Fonseca listo',
-                            style: TextStyle(fontSize: 11, color: AppColors.textLight),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-
-              // Main Assessment Action Module (Ficha Principal)
-              Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.shadowSoft,
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
+                    ])),
                     Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.06),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.medical_services_outlined,
-                        size: 64,
-                        color: AppColors.primary,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                      child: Column(children: [
+                        Text('${_reportes.length}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                        const Text('Eval.', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                      ]),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Evaluación de Disfunción ATM',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.onSurface,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Test Anamnésico de Fonseca para medir el grado de gravedad de la articulación temporomandibular.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textLight,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 28),
+                  ]),
+                ),
+                const SizedBox(height: 24),
 
-                    // Primary Gradient Pill Button with Scale Micro-Animation
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _primaryBtnScale = 0.98),
-                      onTapUp: (_) => setState(() => _primaryBtnScale = 1.0),
-                      onTapCancel: () => setState(() => _primaryBtnScale = 1.0),
-                      child: AnimatedScale(
-                        scale: _primaryBtnScale,
-                        duration: const Duration(milliseconds: 120),
-                        child: Container(
+                // GRID ACCESO RAPIDO 3x2
+                const Text('Acceso Rapido', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                const SizedBox(height: 12),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.95,
+                  children: [
+                    _quickGrid(Icons.folder_shared_outlined, 'Directorio\n360', AppColors.primary, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientDirectoryScreen()))),
+                    _quickGrid(Icons.calendar_month_outlined, 'Citas &\nAgenda', const Color(0xFF983C00), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentsScreen()))),
+                    _quickGrid(Icons.medical_services_outlined, 'Tratamientos\n& Estetica', const Color(0xFF007A78), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TreatmentsScreen()))),
+                    _quickGrid(Icons.medication_outlined, 'Receta\nMedica', const Color(0xFF0056B3), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionScreen()))),
+                    _quickGrid(Icons.inventory_2_outlined, 'Inventario\nClinico', const Color(0xFF6A0DAD), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InventoryScreen()))),
+                    _quickGrid(Icons.chat_outlined, 'Mensajes\nWA', const Color(0xFF25D366), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MessagesScreen()))),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // CARD EVALUACION ATM
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 20, offset: Offset(0, 6))],
+                  ),
+                  child: Column(children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                      child: Row(children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.health_and_safety_outlined, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Evaluacion Clinica & ATM', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                          Text('Test de Fonseca y consultas clinicas', style: TextStyle(fontSize: 11, color: AppColors.textLight)),
+                        ])),
+                      ]),
+                    ),
+                    const Divider(height: 1, color: AppColors.ghostOutline, indent: 20, endIndent: 20),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(children: [
+                        SizedBox(
                           width: double.infinity,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppColors.primary,
-                                AppColors.primaryContainer,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.shadowSoft,
-                                blurRadius: 20,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
+                          height: 52,
                           child: ElevatedButton.icon(
                             onPressed: _startFonsecaTest,
-                            icon: const Icon(Icons.assessment, size: 22, color: Colors.white),
-                            label: const Text(
-                              'Iniciar Test de Fonseca',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
+                            icon: const Icon(Icons.assessment, size: 20, color: Colors.white),
+                            label: const Text('Iniciar Test de Fonseca (ATM)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Secondary Outlined History Button
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const QuickEvaluationScreen()));
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(child: OutlinedButton.icon(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuickEvaluationScreen())),
+                            icon: const Icon(Icons.speed, size: 16, color: AppColors.primary),
+                            label: const Text('Consulta Clinica', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.primary, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 12)),
+                          )),
+                          const SizedBox(width: 10),
+                          Expanded(child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final p = await Navigator.push<Paciente>(context, MaterialPageRoute(builder: (_) => const PatientRegisterScreen()));
+                              if (p != null) setState(() => _pacienteEjemplo = p);
                             },
-                            icon: const Icon(Icons.speed, size: 18, color: AppColors.primary),
-                            label: const Text(
-                              'Consulta Clínica',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: AppColors.surfaceContainerLowest,
-                              side: const BorderSide(color: AppColors.ghostOutline, width: 1.2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()));
-                            },
-                            icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Colors.white),
-                            label: const Text(
-                              'Directorio 360°',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            ),
-                          ),
-                        ),
-                      ],
+                            icon: const Icon(Icons.person_add_alt_1_outlined, size: 16, color: AppColors.primary),
+                            label: const Text('Nuevo Paciente', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.primary, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 12)),
+                          )),
+                        ]),
+                      ]),
                     ),
-                  ],
+                  ]),
                 ),
-              ),
-              const SizedBox(height: 28),
 
-              // Módulos Clínicos Sanctuary (Grid de Acceso Rápido)
-              const Text(
-                'Módulos Clínicos Sanctuary',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-              ),
-              const SizedBox(height: 14),
-
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.25,
-                children: [
-                  // Card 1: Directorio de Pacientes & Expediente 360°
-                  _buildDashboardModuleCard(
-                    title: 'Directorio Pacientes',
-                    subtitle: 'Expediente & Histórico 360°',
-                    icon: Icons.folder_shared_outlined,
-                    color: AppColors.primary,
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientDirectoryScreen()));
-                    },
-                  ),
-
-                  // Card 2: Receta Médica
-                  _buildDashboardModuleCard(
-                    title: 'Receta Médica',
-                    subtitle: 'Firma digital & WhatsApp',
-                    icon: Icons.medical_services_outlined,
-                    color: const Color(0xFF0056B3),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PrescriptionScreen()));
-                    },
-                  ),
-
-                  // Card 3: Inventario
-                  _buildDashboardModuleCard(
-                    title: 'Inventario Clínico',
-                    subtitle: 'Insumos & Alertas Stock',
-                    icon: Icons.inventory_2_outlined,
-                    color: const Color(0xFF007A78),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
-                    },
-                  ),
-
-                  // Card 4: Gestión de Citas
-                  _buildDashboardModuleCard(
-                    title: 'Gestión de Citas',
-                    subtitle: 'Agenda & Recordatorios WA',
-                    icon: Icons.calendar_month_outlined,
-                    color: const Color(0xFF983C00),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AppointmentsScreen()));
-                    },
-                  ),
+                if (_reportes.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('Evaluaciones Recientes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                    TextButton(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReportsScreen(reportes: _reportes))),
+                      child: const Text('Ver todas', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  ...List.generate(_reportes.length > 2 ? 2 : _reportes.length, (i) {
+                    final r = _reportes[_reportes.length - 1 - i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
+                      child: Row(children: [
+                        Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary, size: 18)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('Test Fonseca ATM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.onSurface)),
+                          Text(r.contenido, style: const TextStyle(fontSize: 11, color: AppColors.textLight), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ])),
+                      ]),
+                    );
+                  }),
                 ],
-              ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
-
-      // Glassmorphic Floating Navigation Bar
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showEvaluationOptions,
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Nueva Accion', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        elevation: 6,
+      ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest.withOpacity(0.92),
+          color: AppColors.surfaceContainerLowest.withOpacity(0.95),
           borderRadius: BorderRadius.circular(32),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadowSoft,
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
+          boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 24, offset: Offset(0, 8))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(32),
@@ -976,40 +429,14 @@ class _HomeScreenState extends State<HomeScreen> {
             unselectedItemColor: AppColors.textLight,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 11,
-            ),
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
             items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Inicio',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_month_outlined),
-                activeIcon: Icon(Icons.calendar_month),
-                label: 'Citas',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.medical_services_outlined),
-                activeIcon: Icon(Icons.medical_services),
-                label: 'Tratamientos',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat_outlined),
-                activeIcon: Icon(Icons.chat),
-                label: 'Mensajes',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outlined),
-                activeIcon: Icon(Icons.person),
-                label: 'Perfil',
-              ),
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Inicio'),
+              BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), activeIcon: Icon(Icons.calendar_month), label: 'Citas'),
+              BottomNavigationBarItem(icon: Icon(Icons.medical_services_outlined), activeIcon: Icon(Icons.medical_services), label: 'Trat.'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'Mensajes'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: 'Perfil'),
             ],
           ),
         ),
@@ -1017,64 +444,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDashboardModuleCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _quickGrid(IconData icon, String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadowSoft,
-              blurRadius: 18,
-              offset: Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 14, offset: Offset(0, 4))],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textLight,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.onSurface, height: 1.3), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ]),
       ),
     );
   }

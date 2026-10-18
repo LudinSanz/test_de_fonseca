@@ -32,6 +32,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
   List<Paciente> _filteredPacientes = [];
   Paciente? _selectedPaciente;
   bool _isLoadingPacientes = true;
+  bool _showingDetail = false; // Para mobile: alterna entre lista y detalle
 
   List<Map<String, dynamic>> _evaluaciones = [];
   List<Map<String, dynamic>> _recetas = [];
@@ -87,6 +88,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
             (p) => p.id == widget.selectedPatient!.id,
             orElse: () => widget.selectedPatient!,
           );
+          _showingDetail = true;
         } else if (list.isNotEmpty) {
           _selectedPaciente = list.first;
         }
@@ -249,89 +251,226 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
       ),
       body: _isLoadingPacientes
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : Column(
-              children: [
-                // Search Bar & Directory Selector Card
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: AppColors.shadowSoft,
-                        blurRadius: 20,
-                        offset: Offset(0, 6),
-                      ),
+          : _showingDetail && _selectedPaciente != null
+              // ── VISTA DETALLE (mobile: ocupa toda la pantalla)
+              ? _buildDetailView()
+              // ── VISTA LISTA
+              : _buildListView(),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
+  // VISTA LISTA DE PACIENTES
+  // ════════════════════════════════════════════════════════
+  Widget _buildListView() {
+    return Column(
+      children: [
+        // Barra de búsqueda prominente
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 16, offset: Offset(0, 4))],
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: AppColors.onSurface),
+              decoration: InputDecoration(
+                hintText: 'Buscar por nombre, telefono, correo...',
+                hintStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 22),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppColors.textLight, size: 20),
+                        onPressed: () { _searchController.clear(); _filterPacientes(); },
+                      )
+                    : null,
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ),
+        // Contador de resultados
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+          child: Row(
+            children: [
+              Text(
+                '${_filteredPacientes.length} paciente${_filteredPacientes.length != 1 ? 's' : ''} registrado${_filteredPacientes.length != 1 ? 's' : ''}',
+                style: const TextStyle(fontSize: 12, color: AppColors.textLight, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        // Lista de tarjetas de paciente
+        Expanded(
+          child: _filteredPacientes.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_search, size: 64, color: AppColors.textLight.withOpacity(0.4)),
+                      const SizedBox(height: 16),
+                      const Text('No se encontraron pacientes', style: TextStyle(color: AppColors.textLight, fontSize: 15)),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Search TextField
-                      TextField(
-                        controller: _searchController,
-                        style: const TextStyle(color: AppColors.onSurface),
-                        decoration: InputDecoration(
-                          hintText: 'Buscar paciente por nombre, teléfono o correo...',
-                          hintStyle: const TextStyle(color: AppColors.textLight, fontSize: 13),
-                          prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                          filled: true,
-                          fillColor: AppColors.surfaceContainerLow,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.ghostOutline, width: 1.0)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.8)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Patient Selector Dropdown
-                      const Text(
-                        'Directorio de Pacientes Registrados',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textLight),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                  itemCount: _filteredPacientes.length,
+                  itemBuilder: (context, index) {
+                    final p = _filteredPacientes[index];
+                    final isSelected = _selectedPaciente?.id == p.id;
+                    final edad = _calcularEdad(p.fechaNacimiento);
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedPaciente = p;
+                          _showingDetail = true;
+                        });
+                        _cargarHistorialPaciente(p);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.ghostOutline, width: 1.0),
+                          color: isSelected ? AppColors.primary.withOpacity(0.08) : AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : AppColors.ghostOutline,
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                          boxShadow: const [BoxShadow(color: AppColors.shadowSoft, blurRadius: 10, offset: Offset(0, 3))],
                         ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Paciente>(
-                            value: _selectedPaciente,
-                            isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
-                            items: _filteredPacientes.map((p) {
-                              return DropdownMenuItem<Paciente>(
-                                value: p,
+                        child: Row(
+                          children: [
+                            // Avatar con inicial
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: isSelected
+                                      ? [AppColors.primary, AppColors.primaryContainer]
+                                      : [AppColors.surfaceContainerLow, AppColors.surfaceContainerLow],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
                                 child: Text(
-                                  '${p.nombre} ${p.apellido} • Tel: ${p.telefono}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                    color: AppColors.onSurface,
+                                  p.nombre.isNotEmpty ? p.nombre[0].toUpperCase() : 'P',
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : AppColors.primary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                            onChanged: (p) {
-                              if (p != null) {
-                                setState(() => _selectedPaciente = p);
-                                _cargarHistorialPaciente(p);
-                              }
-                            },
-                          ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            // Info del paciente
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${p.nombre} ${p.apellido}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.phone_outlined, size: 12, color: AppColors.textLight),
+                                      const SizedBox(width: 4),
+                                      Text(p.telefono, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                                      const SizedBox(width: 10),
+                                      const Icon(Icons.cake_outlined, size: 12, color: AppColors.textLight),
+                                      const SizedBox(width: 4),
+                                      Text('$edad años', style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+                                    ],
+                                  ),
+                                  if (p.email.isNotEmpty) ...[                                    
+                                    const SizedBox(height: 2),
+                                    Text(p.email, style: const TextStyle(fontSize: 11, color: AppColors.textLight), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            // Flecha
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.primary.withOpacity(0.15) : AppColors.surfaceContainerLow,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 14,
+                                color: isSelected ? AppColors.primary : AppColors.textLight,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
+  // VISTA DETALLE DEL EXPEDIENTE 360
+  // ════════════════════════════════════════════════════════
+  Widget _buildDetailView() {
+    return Column(
+      children: [
+        // Botón volver a lista
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() => _showingDetail = false),
+                icon: const Icon(Icons.arrow_back_ios, size: 16, color: AppColors.primary),
+                label: const Text('Directorio', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
+              const Spacer(),
+              // Chip tratamiento activo si aplica
+              if (_tratamientos.any((t) => (t['estado'] ?? '').toString().toLowerCase().contains('activ') || (t['estado'] ?? '').toString().toLowerCase().contains('progreso')))
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.success, width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: AppColors.success),
+                      SizedBox(width: 5),
+                      Text('Tratamiento activo', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
-
-                if (_selectedPaciente != null) ...[
-                  // Patient Profile Banner Card (Asymmetry & Soft Minimalism)
+            ],
+          ),
+        ),
+        // Card perfil del paciente
+        if (_selectedPaciente != null) ...[
+          // Patient Profile Banner Card (Asymmetry & Soft Minimalism)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     padding: const EdgeInsets.all(18),
@@ -539,8 +678,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                   ),
                 ],
               ],
-            ),
-    );
+            );
   }
 
   Widget _buildQuickActionButton({
