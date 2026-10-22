@@ -124,7 +124,13 @@ class SupabaseService {
         }
         final response = await query.order('fecha', ascending: false);
         final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
-        await LocalDbService.saveEvaluacionesMap(remoteList);
+        if (pacienteId == null || pacienteId.isEmpty) {
+          await LocalDbService.saveEvaluacionesMap(remoteList);
+        } else {
+          for (var item in remoteList) {
+            await LocalDbService.upsertEvaluacionMap(item);
+          }
+        }
         return remoteList;
       }
     } catch (e) {
@@ -175,7 +181,13 @@ class SupabaseService {
         }
         final response = await query.order('fecha_hora', ascending: true);
         final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
-        await LocalDbService.saveCitasMap(remoteList);
+        if (pacienteId == null || pacienteId.isEmpty) {
+          await LocalDbService.saveCitasMap(remoteList);
+        } else {
+          for (var item in remoteList) {
+            await LocalDbService.upsertCitaMap(item);
+          }
+        }
         return remoteList;
       }
     } catch (e) {
@@ -266,7 +278,13 @@ class SupabaseService {
         }
         final response = await query.order('fecha', ascending: false);
         final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
-        await LocalDbService.saveRecetasMap(remoteList);
+        if (pacienteId == null || pacienteId.isEmpty) {
+          await LocalDbService.saveRecetasMap(remoteList);
+        } else {
+          for (var item in remoteList) {
+            await LocalDbService.upsertRecetaMap(item);
+          }
+        }
         return remoteList;
       }
     } catch (e) {
@@ -310,7 +328,13 @@ class SupabaseService {
         }
         final response = await query;
         final remoteList = (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
-        await LocalDbService.saveTratamientosMap(remoteList);
+        if (pacienteId == null || pacienteId.isEmpty) {
+          await LocalDbService.saveTratamientosMap(remoteList);
+        } else {
+          for (var item in remoteList) {
+            await LocalDbService.upsertTratamientoMap(item);
+          }
+        }
         return remoteList;
       }
     } catch (e) {

@@ -805,32 +805,10 @@ class LocalDbService {
   // Retorna datos reales del cache SIN incluir datos demo/seed.
 
   static Future<List<Map<String, dynamic>>> getPacientesMapNoSeed() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString(_keyPacientes);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        final List decoded = jsonDecode(jsonStr);
-        final list = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-        if (list.isNotEmpty) return list;
-      }
-    } catch (e) {
-      debugPrint('Error leyendo pacientes NoSeed: $e');
-    }
     return await getPacientesMap();
   }
 
   static Future<List<Map<String, dynamic>>> getEvaluacionesMapNoSeed() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString(_keyEvaluaciones);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        final List decoded = jsonDecode(jsonStr);
-        final list = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-        if (list.isNotEmpty) return list;
-      }
-    } catch (e) {
-      debugPrint('Error leyendo evaluaciones NoSeed: $e');
-    }
     return await getEvaluacionesMap();
   }
 
@@ -882,17 +860,7 @@ class LocalDbService {
   }
 
   static Future<List<Map<String, dynamic>>> getTratamientosMapNoSeed() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString(_keyTratamientos);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        final List decoded = jsonDecode(jsonStr);
-        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-      }
-    } catch (e) {
-      debugPrint('Error leyendo tratamientos NoSeed: $e');
-    }
-    return List<Map<String, dynamic>>.from(_seedTratamientos);
+    return await getTratamientosMap();
   }
 
   static Future<void> saveTratamientosMap(List<Map<String, dynamic>> list) async {

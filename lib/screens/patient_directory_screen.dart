@@ -58,18 +58,27 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
     super.dispose();
   }
 
+  String _normalize(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ü', 'u');
+  }
+
   void _filterPacientes() {
-    final query = _searchController.text.toLowerCase().trim();
+    final rawQuery = _searchController.text.trim();
+    final tokens = _normalize(rawQuery).split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
     setState(() {
-      if (query.isEmpty) {
+      if (tokens.isEmpty) {
         _filteredPacientes = List.from(_allPacientes);
       } else {
         _filteredPacientes = _allPacientes.where((p) {
-          final nameMatch = p.nombre.toLowerCase().contains(query);
-          final lastNameMatch = p.apellido.toLowerCase().contains(query);
-          final phoneMatch = p.telefono.contains(query);
-          final emailMatch = p.email.toLowerCase().contains(query);
-          return nameMatch || lastNameMatch || phoneMatch || emailMatch;
+          final searchableText = _normalize('${p.nombre} ${p.apellido} ${p.telefono} ${p.email} ${p.direccion}');
+          return tokens.every((token) => searchableText.contains(token));
         }).toList();
       }
     });
@@ -255,6 +264,19 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+            tooltip: 'Sincronizar y Actualizar',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Sincronizando pacientes desde la nube...'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+              await _cargarPacientes();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
             tooltip: 'Registrar Nuevo Paciente',
             onPressed: () async {
@@ -331,21 +353,30 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
         ),
         // Lista de tarjetas de paciente
         Expanded(
-          child: _filteredPacientes.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+          child: RefreshIndicator(
+            onRefresh: _cargarPacientes,
+            child: _filteredPacientes.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      Icon(Icons.person_search, size: 64, color: AppColors.textLight.withOpacity(0.4)),
-                      const SizedBox(height: 16),
-                      const Text('No se encontraron pacientes', style: TextStyle(color: AppColors.textLight, fontSize: 15)),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_search, size: 64, color: AppColors.textLight.withOpacity(0.4)),
+                            const SizedBox(height: 16),
+                            const Text('No se encontraron pacientes', style: TextStyle(color: AppColors.textLight, fontSize: 15)),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                  itemCount: _filteredPacientes.length,
-                  itemBuilder: (context, index) {
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                    itemCount: _filteredPacientes.length,
+                    itemBuilder: (context, index) {
                     final p = _filteredPacientes[index];
                     final isSelected = _selectedPaciente?.id == p.id;
                     final edad = _calcularEdad(p.fechaNacimiento);
