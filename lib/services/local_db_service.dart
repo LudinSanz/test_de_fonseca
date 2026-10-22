@@ -15,6 +15,72 @@ class LocalDbService {
   // Seed Data Initializers
   static final List<Map<String, dynamic>> _seedPacientes = [
     {
+      'id': 'pac_catarina_ramirez',
+      'nombre': 'Catarina',
+      'apellido': 'Ramirez',
+      'email': 'catarina.ramirez@pacientes.rizo.gt',
+      'telefono': '+502 5123 4567',
+      'fecha_nacimiento': '1972-04-12',
+      'fechaNacimiento': '1972-04-12',
+      'genero': 'Femenino',
+      'direccion': 'Ciudad de Guatemala (54 años)',
+    },
+    {
+      'id': 'pac_josue_naz',
+      'nombre': 'Josue David',
+      'apellido': 'Naz Morales',
+      'email': 'josue.naz@pacientes.rizo.gt',
+      'telefono': '+502 5432 9876',
+      'fecha_nacimiento': '1998-06-20',
+      'fechaNacimiento': '1998-06-20',
+      'genero': 'Masculino',
+      'direccion': 'Guatemala (28 años)',
+    },
+    {
+      'id': 'pac_maria_giron',
+      'nombre': 'María',
+      'apellido': 'Girón',
+      'email': 'maria.giron@pacientes.rizo.gt',
+      'telefono': '+502 4111 2233',
+      'fecha_nacimiento': '1993-09-14',
+      'fechaNacimiento': '1993-09-14',
+      'genero': 'Femenino',
+      'direccion': 'Mixco, Guatemala (33 años)',
+    },
+    {
+      'id': 'pac_cesar_lopez',
+      'nombre': 'Cesar Augusto',
+      'apellido': 'López Rodríguez',
+      'email': 'cesar.lopez@pacientes.rizo.gt',
+      'telefono': '+502 5888 7766',
+      'fecha_nacimiento': '1977-02-18',
+      'fechaNacimiento': '1977-02-18',
+      'genero': 'Masculino',
+      'direccion': 'Zona 14, Ciudad de Guatemala (49 años)',
+    },
+    {
+      'id': 'pac_adriana_lemus',
+      'nombre': 'Adriana Guadalupe',
+      'apellido': 'Lemus',
+      'email': 'adriana.lemus@pacientes.rizo.gt',
+      'telefono': '+502 4222 3344',
+      'fecha_nacimiento': '2006-11-05',
+      'fechaNacimiento': '2006-11-05',
+      'genero': 'Femenino',
+      'direccion': 'Carretera a El Salvador, Guatemala (20 años)',
+    },
+    {
+      'id': 'pac_alfonso_rosales',
+      'nombre': 'Alfonso Dorian',
+      'apellido': 'Rosales Cisneros',
+      'email': 'alfonso.rosales@pacientes.rizo.gt',
+      'telefono': '+502 5999 8811',
+      'fecha_nacimiento': '1953-05-10',
+      'fechaNacimiento': '1953-05-10',
+      'genero': 'Masculino',
+      'direccion': 'Zona 1, Ciudad de Guatemala (DPI: 1983 58555 0101, 73 años)',
+    },
+    {
       'id': 'paciente_demo',
       'nombre': 'María Mercedes',
       'apellido': 'Morales',
@@ -39,6 +105,91 @@ class LocalDbService {
   ];
 
   static final List<Map<String, dynamic>> _seedEvaluaciones = [
+    {
+      'id': 'eval_catarina_1',
+      'paciente_id': 'pac_catarina_ramirez',
+      'pacienteId': 'pac_catarina_ramirez',
+      'paciente_nombre': 'Catarina Ramirez',
+      'fecha': '2026-10-20',
+      'puntuacion': 15,
+      'diagnostico': 'Pérdida total de piezas dentales y reabsorción ósea grave. Desajuste de prótesis removible por pérdida ósea.',
+      'respuestas': {
+        'motivo': 'Pérdida total de piezas dentales y reabsorción ósea grave',
+        'detalles': 'Desajuste de prótesis removible por pérdida ósea. Tratamiento: Colocación de implantes subperiósticos en ambas arcadas para colocación de prótesis provisional atornillada sobre implantes dentales.',
+        'edad': '54 años',
+      },
+    },
+    {
+      'id': 'eval_josue_1',
+      'paciente_id': 'pac_josue_naz',
+      'pacienteId': 'pac_josue_naz',
+      'paciente_nombre': 'Josue David Naz Morales',
+      'fecha': '2026-10-21',
+      'puntuacion': 10,
+      'diagnostico': 'Pieza 31 con caries profunda no restaurable.',
+      'respuestas': {
+        'motivo': 'Caries profunda no restaurable en pieza 31',
+        'detalles': 'Tratamiento: Se extrae quirúrgicamente pieza 31 y se rehabilita con colocación de implante dental en pieza 31 para restauración de pieza ausente. Requiere regeneración ósea y membrana de colágeno. Se rehabilita posteriormente con corona de zirconio atornillada sobre implante.',
+        'edad': '28 años',
+      },
+    },
+    {
+      'id': 'eval_maria_1',
+      'paciente_id': 'pac_maria_giron',
+      'pacienteId': 'pac_maria_giron',
+      'paciente_nombre': 'María Girón',
+      'fecha': '2026-10-19',
+      'puntuacion': 14,
+      'diagnostico': 'Piezas 18, 19, 3 y 4 ausentes. Pérdida ósea',
+      'respuestas': {
+        'motivo': 'Piezas 18, 19, 3 y 4 ausentes. Pérdida ósea',
+        'detalles': 'Tratamiento: Se colocan implantes dentales en piezas 18, 19, 3 y 4 para reposición de piezas dentales ausentes. Es necesario regeneración ósea y membrana en piezas 18 y 19. Se rehabilita con coronas de zirconio.',
+        'edad': '33 años',
+      },
+    },
+    {
+      'id': 'eval_cesar_1',
+      'paciente_id': 'pac_cesar_lopez',
+      'pacienteId': 'pac_cesar_lopez',
+      'paciente_nombre': 'Cesar Augusto López Rodríguez',
+      'fecha': '2026-10-21',
+      'puntuacion': 11,
+      'diagnostico': 'Resto radicular de pieza 8 no restaurable.',
+      'respuestas': {
+        'motivo': 'Resto radicular de pieza 8 no restaurable',
+        'detalles': 'Tratamiento: Extracción quirúrgica de resto radicular y colocación de implante dental para reponer pieza 8. Se realiza regeneración ósea y membrana de tejido conectivo para protección de injerto.',
+        'edad': '49 años',
+      },
+    },
+    {
+      'id': 'eval_adriana_1',
+      'paciente_id': 'pac_adriana_lemus',
+      'pacienteId': 'pac_adriana_lemus',
+      'paciente_nombre': 'Adriana Guadalupe Lemus',
+      'fecha': '2026-10-18',
+      'puntuacion': 18,
+      'diagnostico': 'Ameloblastoma en cuerpo mandibular izquierdo.',
+      'respuestas': {
+        'motivo': 'Ameloblastoma en cuerpo mandibular izquierdo',
+        'detalles': 'Tratamiento: Remoción quirúrgica de Ameloblastoma en cuerpo mandibular izquierdo, injerto microvascularizado de peroné para reconstrucción mandibular, colocación de placa de reconstrucción y posterior, colocación de implante dental subperióstico para rehabilitación y repoisción de piezas dentales ausentes.',
+        'edad': '20 años',
+      },
+    },
+    {
+      'id': 'eval_alfonso_1',
+      'paciente_id': 'pac_alfonso_rosales',
+      'pacienteId': 'pac_alfonso_rosales',
+      'paciente_nombre': 'Alfonso Dorian Rosales Cisneros',
+      'fecha': '2026-10-21',
+      'puntuacion': 16,
+      'diagnostico': 'Quiste nasopalatino.',
+      'respuestas': {
+        'motivo': 'Quiste nasopalatino. DPI: 1983 58555 0101',
+        'detalles': 'Tratamiento: Biopsia escisional para retiro de quiste nasopalatino en sala de operaciones, 24 hrs hospitalización, más estudio histopatológico.',
+        'edad': '73 años',
+        'dpi': '1983 58555 0101',
+      },
+    },
     {
       'id': 'eval_demo_1',
       'paciente_id': 'paciente_demo',
@@ -160,6 +311,164 @@ class LocalDbService {
 
   static final List<Map<String, dynamic>> _seedTratamientos = [
     {
+      'id': 'trat_catarina_1',
+      'paciente_id': 'pac_catarina_ramirez',
+      'pacienteId': 'pac_catarina_ramirez',
+      'diente': 0,
+      'categoria': 'cirugia_implantes',
+      'tratamiento': 'Implantes Subperiósticos Bimaxilares + Prótesis Atornillada',
+      'subtipo': 'Cirugía de Implantes Subperiósticos en Ambas Arcadas',
+      'diagnostico': 'Pérdida total de piezas dentales y reabsorción ósea grave. Desajuste de prótesis removible por pérdida ósea.',
+      'evolucion': 'Planificación Quirúrgica & Diseño 3D',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Tomografía CBCT & Escaneo 3D',
+        'Diseño y Manufactura de Malla Subperióstica',
+        'Colocación Quirúrgica en Ambas Arcadas',
+        'Colocación de Prótesis Provisional Atornillada',
+        'Cicatrización y Osteointegración',
+        'Rehabilitación Definitiva'
+      ],
+      'precio_gtq': 38000.0,
+      'abono_gtq': 15000.0,
+      'estado': 'En Proceso',
+      'zona': 'Ambas arcadas (Maxilar Superior y Mandíbula)',
+      'notas': 'Colocación de implantes subperiósticos en ambas arcadas para colocación de prótesis provisional atornillada sobre implantes dentales.',
+      'fecha': '2026-10-20',
+    },
+    {
+      'id': 'trat_josue_1',
+      'paciente_id': 'pac_josue_naz',
+      'pacienteId': 'pac_josue_naz',
+      'diente': 31,
+      'categoria': 'cirugia_implantes',
+      'tratamiento': 'Extracción Quirúrgica Pza. 31 + Implante Dental + Regeneración Ósea',
+      'subtipo': 'Implante Inmediato con Membrana de Colágeno',
+      'diagnostico': 'Pieza 31 con caries profunda no restaurable.',
+      'evolucion': 'Fase Quirúrgica Programada',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Evaluación Clínica & Periapical',
+        'Extracción Quirúrgica Pieza 31',
+        'Colocación de Implante Dental Pza 31',
+        'Regeneración Ósea y Membrana de Colágeno',
+        'Periodo de Osteointegración',
+        'Corona de Zirconio Atornillada sobre Implante'
+      ],
+      'precio_gtq': 6500.0,
+      'abono_gtq': 3000.0,
+      'estado': 'Programado',
+      'zona': 'Pieza 31 (Incisivo Central Inferior Izquierdo)',
+      'notas': 'Se extrae quirúrgicamente pieza 31 y se rehabilita con colocación de implante dental en pieza 31 para restauración de pieza ausente. Requiere regeneración ósea y membrana de colágeno. Se rehabilita posteriormente con corona de zirconio atornillada sobre implante.',
+      'fecha': '2026-10-21',
+    },
+    {
+      'id': 'trat_maria_1',
+      'paciente_id': 'pac_maria_giron',
+      'pacienteId': 'pac_maria_giron',
+      'diente': 18,
+      'categoria': 'cirugia_implantes',
+      'tratamiento': 'Colocación de Implantes Dentales en Piezas 18, 19, 3 y 4',
+      'subtipo': 'Implantes Múltiples con Regeneración y Membrana',
+      'diagnostico': 'Piezas 18, 19, 3 y 4 ausentes. Pérdida ósea',
+      'evolucion': 'Regeneración Ósea y Fase Quirúrgica',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Estudio Tomográfico & Guía Quirúrgica',
+        'Colocación de Implantes (Piezas 18, 19, 3 y 4)',
+        'Regeneración Ósea y Membrana en Piezas 18 y 19',
+        'Osteointegración Bimaxilar',
+        'Toma de Impresiones Digitales',
+        'Rehabilitación con Coronas de Zirconio'
+      ],
+      'precio_gtq': 24000.0,
+      'abono_gtq': 8000.0,
+      'estado': 'En Proceso',
+      'zona': 'Piezas 18, 19, 3 y 4 (Sectores Posteriores)',
+      'notas': 'Se colocan implantes dentales en piezas 18, 19, 3 y 4 para reposición de piezas dentales ausentes. Es necesario regeneración ósea y membrana en piezas 18 y 19. Se rehabilita con coronas de zirconio.',
+      'fecha': '2026-10-19',
+    },
+    {
+      'id': 'trat_cesar_1',
+      'paciente_id': 'pac_cesar_lopez',
+      'pacienteId': 'pac_cesar_lopez',
+      'diente': 8,
+      'categoria': 'cirugia_implantes',
+      'tratamiento': 'Extracción Quirúrgica Resto Radicular Pza. 8 + Implante + Injerto Conectivo',
+      'subtipo': 'Implante Dental con Membrana de Tejido Conectivo',
+      'diagnostico': 'Resto radicular de pieza 8 no restaurable.',
+      'evolucion': 'Programación Quirúrgica',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Valoración Estética Anterior y CBCT',
+        'Extracción Quirúrgica de Resto Radicular Pza 8',
+        'Colocación de Implante Dental Inmediato',
+        'Regeneración Ósea + Membrana de Tejido Conectivo',
+        'Provisionalización Inmediata',
+        'Rehabilitación Definitiva Zirconio'
+      ],
+      'precio_gtq': 8500.0,
+      'abono_gtq': 4000.0,
+      'estado': 'Programado',
+      'zona': 'Pieza 8 (Incisivo Central Superior Derecho)',
+      'notas': 'Extracción quirúrgica de resto radicular y colocación de implante dental para reponer pieza 8. Se realiza regeneración ósea y membrana de tejido conectivo para protección de injerto.',
+      'fecha': '2026-10-21',
+    },
+    {
+      'id': 'trat_adriana_1',
+      'paciente_id': 'pac_adriana_lemus',
+      'pacienteId': 'pac_adriana_lemus',
+      'diente': 0,
+      'categoria': 'cirugia_maxilofacial',
+      'tratamiento': 'Remoción de Ameloblastoma + Injerto de Peroné + Placa + Implante Subperióstico',
+      'subtipo': 'Cirugía Maxilofacial Reconstructiva Microvascular',
+      'diagnostico': 'Ameloblastoma en cuerpo mandibular izquierdo.',
+      'evolucion': 'Planificación Hospitalaria & VSP 3D',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Tomografía 3D y Angiografía Peroné',
+        'Planificación Virtual Quirúrgica (VSP)',
+        'Remoción Quirúrgica de Ameloblastoma',
+        'Injerto Microvascularizado de Peroné',
+        'Colocación de Placa de Reconstrucción Mandibular',
+        'Colocación de Implante Dental Subperióstico',
+        'Rehabilitación y Reposición de Piezas Ausentes'
+      ],
+      'precio_gtq': 75000.0,
+      'abono_gtq': 30000.0,
+      'estado': 'En Proceso',
+      'zona': 'Cuerpo Mandibular Izquierdo',
+      'notas': 'Remoción quirúrgica de Ameloblastoma en cuerpo mandibular izquierdo, injerto microvascularizado de peroné para reconstrucción mandibular, colocación de placa de reconstrucción y posterior, colocación de implante dental subperióstico para rehabilitación y repoisción de piezas dentales ausentes.',
+      'fecha': '2026-10-18',
+    },
+    {
+      'id': 'trat_alfonso_1',
+      'paciente_id': 'pac_alfonso_rosales',
+      'pacienteId': 'pac_alfonso_rosales',
+      'diente': 0,
+      'categoria': 'cirugia_maxilofacial',
+      'tratamiento': 'Biopsia Escisional de Quiste Nasopalatino en Quirófano + Estudio Histopatológico',
+      'subtipo': 'Cirugía Hospitalaria y Enucleación de Quiste',
+      'diagnostico': 'Quiste nasopalatino.',
+      'evolucion': 'Programación en Sala de Operaciones',
+      'etapa_actual_index': 1,
+      'etapas': [
+        'Estudio Tomográfico CBCT Palatino',
+        'Evaluación Preanestésica & Laboratorios',
+        'Biopsia Escisional en Sala de Operaciones',
+        'Hospitalización Postoperatoria (24 horas)',
+        'Estudio Histopatológico de Tejido',
+        'Control y Retiro de Suturas (8 días)',
+        'Alta y Seguimiento Oclusal'
+      ],
+      'precio_gtq': 14500.0,
+      'abono_gtq': 5000.0,
+      'estado': 'Programado',
+      'zona': 'Conducto Nasopalatino / Paladar Anterior',
+      'notas': 'DPI: 1983 58555 0101. Biopsia escisional para retiro de quiste nasopalatino en sala de operaciones, 24 hrs hospitalización, más estudio histopatológico.',
+      'fecha': '2026-10-21',
+    },
+    {
       'id': 'trat_demo_1',
       'paciente_id': 'paciente_demo',
       'pacienteId': 'paciente_demo',
@@ -271,7 +580,19 @@ class LocalDbService {
       final String? jsonStr = prefs.getString(key);
       if (jsonStr != null && jsonStr.isNotEmpty) {
         final List decoded = jsonDecode(jsonStr);
-        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        final list = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        bool updated = false;
+        for (var seed in defaultSeed) {
+          final sId = seed['id']?.toString();
+          if (sId != null && !list.any((item) => item['id']?.toString() == sId)) {
+            list.add(Map<String, dynamic>.from(seed));
+            updated = true;
+          }
+        }
+        if (updated) {
+          await saveList(key, list);
+        }
+        return list;
       }
     } catch (e) {
       debugPrint('Error leyendo local key $key: $e');
@@ -489,12 +810,13 @@ class LocalDbService {
       final String? jsonStr = prefs.getString(_keyPacientes);
       if (jsonStr != null && jsonStr.isNotEmpty) {
         final List decoded = jsonDecode(jsonStr);
-        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        final list = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        if (list.isNotEmpty) return list;
       }
     } catch (e) {
       debugPrint('Error leyendo pacientes NoSeed: $e');
     }
-    return [];
+    return await getPacientesMap();
   }
 
   static Future<List<Map<String, dynamic>>> getEvaluacionesMapNoSeed() async {
@@ -503,12 +825,13 @@ class LocalDbService {
       final String? jsonStr = prefs.getString(_keyEvaluaciones);
       if (jsonStr != null && jsonStr.isNotEmpty) {
         final List decoded = jsonDecode(jsonStr);
-        return decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        final list = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        if (list.isNotEmpty) return list;
       }
     } catch (e) {
       debugPrint('Error leyendo evaluaciones NoSeed: $e');
     }
-    return [];
+    return await getEvaluacionesMap();
   }
 
   static Future<List<Map<String, dynamic>>> getCitasMapNoSeed() async {

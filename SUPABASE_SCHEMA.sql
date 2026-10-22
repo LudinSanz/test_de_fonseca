@@ -250,3 +250,49 @@ CREATE POLICY "allow_auth_examenes_clinicos_all" ON public.examenes_clinicos
   FOR ALL TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- ========================================================
+-- REGISTROS CLÍNICOS INICIALES (6 PACIENTES Y TRATAMIENTOS)
+-- ========================================================
+
+INSERT INTO public.pacientes (id, nombre, apellido, email, telefono, fecha_nacimiento, fechaNacimiento, genero, direccion)
+VALUES
+  ('pac_catarina_ramirez', 'Catarina', 'Ramirez', 'catarina.ramirez@pacientes.rizo.gt', '+502 5123 4567', '1972-04-12', '1972-04-12', 'Femenino', 'Ciudad de Guatemala (54 años)'),
+  ('pac_josue_naz', 'Josue David', 'Naz Morales', 'josue.naz@pacientes.rizo.gt', '+502 5432 9876', '1998-06-20', '1998-06-20', 'Masculino', 'Guatemala (28 años)'),
+  ('pac_maria_giron', 'María', 'Girón', 'maria.giron@pacientes.rizo.gt', '+502 4111 2233', '1993-09-14', '1993-09-14', 'Femenino', 'Mixco, Guatemala (33 años)'),
+  ('pac_cesar_lopez', 'Cesar Augusto', 'López Rodríguez', 'cesar.lopez@pacientes.rizo.gt', '+502 5888 7766', '1977-02-18', '1977-02-18', 'Masculino', 'Zona 14, Ciudad de Guatemala (49 años)'),
+  ('pac_adriana_lemus', 'Adriana Guadalupe', 'Lemus', 'adriana.lemus@pacientes.rizo.gt', '+502 4222 3344', '2006-11-05', '2006-11-05', 'Femenino', 'Carretera a El Salvador, Guatemala (20 años)'),
+  ('pac_alfonso_rosales', 'Alfonso Dorian', 'Rosales Cisneros', 'alfonso.rosales@pacientes.rizo.gt', '+502 5999 8811', '1953-05-10', '1953-05-10', 'Masculino', 'Zona 1, Ciudad de Guatemala (DPI: 1983 58555 0101, 73 años)')
+ON CONFLICT (id) DO UPDATE SET
+  nombre = EXCLUDED.nombre,
+  apellido = EXCLUDED.apellido,
+  telefono = EXCLUDED.telefono,
+  fecha_nacimiento = EXCLUDED.fecha_nacimiento,
+  direccion = EXCLUDED.direccion;
+
+INSERT INTO public.tratamientos (id, paciente_id, diente, categoria, tratamiento, subtipo, diagnostico, evolucion, precio_gtq, abono_gtq, estado, notas, fecha)
+VALUES
+  ('trat_catarina_1', 'pac_catarina_ramirez', 0, 'cirugia_implantes', 'Implantes Subperiósticos Bimaxilares + Prótesis Atornillada', 'Cirugía de Implantes Subperiósticos', 'Pérdida total de piezas dentales y reabsorción ósea grave. Desajuste de prótesis removible por pérdida ósea.', 'Planificación Quirúrgica & Diseño 3D', 38000.0, 15000.0, 'En Proceso', 'Colocación de implantes subperiósticos en ambas arcadas para colocación de prótesis provisional atornillada sobre implantes dentales.', '2026-10-20'),
+  ('trat_josue_1', 'pac_josue_naz', 31, 'cirugia_implantes', 'Extracción Quirúrgica Pza. 31 + Implante Dental + Regeneración Ósea', 'Implante Inmediato con Membrana de Colágeno', 'Pieza 31 con caries profunda no restaurable.', 'Fase Quirúrgica Programada', 6500.0, 3000.0, 'Programado', 'Se extrae quirúrgicamente pieza 31 y se rehabilita con colocación de implante dental en pieza 31 para restauración de pieza ausente. Requiere regeneración ósea y membrana de colágeno. Se rehabilita posteriormente con corona de zirconio atornillada sobre implante.', '2026-10-21'),
+  ('trat_maria_1', 'pac_maria_giron', 18, 'cirugia_implantes', 'Colocación de Implantes Dentales en Piezas 18, 19, 3 y 4', 'Implantes Múltiples con Regeneración y Membrana', 'Piezas 18, 19, 3 y 4 ausentes. Pérdida ósea', 'Regeneración Ósea y Fase Quirúrgica', 24000.0, 8000.0, 'En Proceso', 'Se colocan implantes dentales en piezas 18, 19, 3 y 4 para reposición de piezas dentales ausentes. Es necesario regeneración ósea y membrana en piezas 18 y 19. Se rehabilita con coronas de zirconio.', '2026-10-19'),
+  ('trat_cesar_1', 'pac_cesar_lopez', 8, 'cirugia_implantes', 'Extracción Quirúrgica Resto Radicular Pza. 8 + Implante + Injerto Conectivo', 'Implante Dental con Membrana de Tejido Conectivo', 'Resto radicular de pieza 8 no restaurable.', 'Programación Quirúrgica', 8500.0, 4000.0, 'Programado', 'Extracción quirúrgica de resto radicular y colocación de implante dental para reponer pieza 8. Se realiza regeneración ósea y membrana de tejido conectivo para protección de injerto.', '2026-10-21'),
+  ('trat_adriana_1', 'pac_adriana_lemus', 0, 'cirugia_maxilofacial', 'Remoción de Ameloblastoma + Injerto de Peroné + Placa + Implante Subperióstico', 'Cirugía Maxilofacial Reconstructiva Microvascular', 'Ameloblastoma en cuerpo mandibular izquierdo.', 'Planificación Hospitalaria & VSP 3D', 75000.0, 30000.0, 'En Proceso', 'Remoción quirúrgica de Ameloblastoma en cuerpo mandibular izquierdo, injerto microvascularizado de peroné para reconstrucción mandibular, colocación de placa de reconstrucción y posterior, colocación de implante dental subperióstico para rehabilitación y repoisción de piezas dentales ausentes.', '2026-10-18'),
+  ('trat_alfonso_1', 'pac_alfonso_rosales', 0, 'cirugia_maxilofacial', 'Biopsia Escisional de Quiste Nasopalatino en Quirófano + Estudio Histopatológico', 'Cirugía Hospitalaria y Enucleación de Quiste', 'Quiste nasopalatino.', 'Programación en Sala de Operaciones', 14500.0, 5000.0, 'Programado', 'DPI: 1983 58555 0101. Biopsia escisional para retiro de quiste nasopalatino en sala de operaciones, 24 hrs hospitalización, más estudio histopatológico.', '2026-10-21')
+ON CONFLICT (id) DO UPDATE SET
+  tratamiento = EXCLUDED.tratamiento,
+  diagnostico = EXCLUDED.diagnostico,
+  estado = EXCLUDED.estado,
+  notas = EXCLUDED.notas;
+
+INSERT INTO public.evaluaciones (id, paciente_id, paciente_nombre, fecha, puntuacion, diagnostico, respuestas)
+VALUES
+  ('eval_catarina_1', 'pac_catarina_ramirez', 'Catarina Ramirez', '2026-10-20', 15, 'Pérdida total de piezas dentales y reabsorción ósea grave. Desajuste de prótesis removible por pérdida ósea.', '{"motivo": "Pérdida total de piezas dentales", "edad": "54 años"}'),
+  ('eval_josue_1', 'pac_josue_naz', 'Josue David Naz Morales', '2026-10-21', 10, 'Pieza 31 con caries profunda no restaurable.', '{"motivo": "Caries profunda no restaurable en pza 31", "edad": "28 años"}'),
+  ('eval_maria_1', 'pac_maria_giron', 'María Girón', '2026-10-19', 14, 'Piezas 18, 19, 3 y 4 ausentes. Pérdida ósea', '{"motivo": "Piezas 18, 19, 3 y 4 ausentes", "edad": "33 años"}'),
+  ('eval_cesar_1', 'pac_cesar_lopez', 'Cesar Augusto López Rodríguez', '2026-10-21', 11, 'Resto radicular de pieza 8 no restaurable.', '{"motivo": "Resto radicular pza 8", "edad": "49 años"}'),
+  ('eval_adriana_1', 'pac_adriana_lemus', 'Adriana Guadalupe Lemus', '2026-10-18', 18, 'Ameloblastoma en cuerpo mandibular izquierdo.', '{"motivo": "Ameloblastoma mandibular", "edad": "20 años"}'),
+  ('eval_alfonso_1', 'pac_alfonso_rosales', 'Alfonso Dorian Rosales Cisneros', '2026-10-21', 16, 'Quiste nasopalatino.', '{"motivo": "Quiste nasopalatino", "edad": "73 años", "dpi": "1983 58555 0101"}')
+ON CONFLICT (id) DO UPDATE SET
+  diagnostico = EXCLUDED.diagnostico,
+  respuestas = EXCLUDED.respuestas;
+
