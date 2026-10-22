@@ -471,6 +471,15 @@ class LocalDbService {
     }
   }
 
+  static Future<void> clearActiveDoctorSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('${_keyUsers}_active_doctor');
+    } catch (e) {
+      debugPrint('Error al limpiar sesión activa de doctor: $e');
+    }
+  }
+
   // ==================== NO-SEED VARIANTS ====================
   // Retorna datos reales del cache SIN incluir datos demo/seed.
 

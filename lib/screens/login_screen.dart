@@ -108,12 +108,28 @@ class _LoginScreenState extends State<LoginScreen> {
           } catch (_) {}
           _mostrarDialogoNoRegistrado(user.email);
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Credenciales incorrectas o usuario no encontrado.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error de autenticación: ${e.message}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al ingresar: $e'),
+            content: Text('Error al ingresar: ${e.toString().replaceAll("Exception: ", "")}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -131,7 +147,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await AuthService().signInWithGoogle();
-      if (user != null && mounted) {
+      if (!mounted) return;
+      if (user == null) {
+        // Inicio de sesión cancelado o no completado
+        return;
+      }
+      if (mounted) {
         final supabaseService = SupabaseService();
         final String searchEmail = user.email.trim();
 

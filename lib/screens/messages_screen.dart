@@ -119,7 +119,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
     }
     
-    final tel = telefono.replaceAll('+', '');
+    final tel = telefono.replaceAll(RegExp(r'[^0-9]'), '');
     final uri = Uri.parse('https://wa.me/$tel?text=${Uri.encodeComponent(mensaje)}');
 
     _agregarMensaje(p.id, {

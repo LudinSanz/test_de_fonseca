@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user.dart';
 import 'supabase_service.dart';
+import 'local_db_service.dart';
 
 class AuthService {
   SupabaseClient? get _supabase {
@@ -14,8 +16,8 @@ class AuthService {
 
   Future<User?> login(String email, String password) async {
     final cleanEmail = email.trim();
-    try {
-      if (_supabase != null) {
+    if (_supabase != null) {
+      try {
         final response = await _supabase!.auth.signInWithPassword(
           email: cleanEmail,
           password: password,
@@ -30,27 +32,34 @@ class AuthService {
             name: name,
           );
         }
+        return null;
+      } on AuthException catch (e) {
+        debugPrint('Error de autenticación Supabase: ${e.message}');
+        rethrow;
+      } catch (e) {
+        debugPrint('Error general en login Supabase: $e');
+        rethrow;
       }
-    } catch (e) {
-      print('Aviso en login Supabase: $e');
     }
 
-    final rawName = cleanEmail.contains('@') ? cleanEmail.split('@').first : 'Usuario';
-    final formattedName = rawName.isNotEmpty ? rawName[0].toUpperCase() + rawName.substring(1) : 'Usuario';
-    final user = User(
-      id: 'usr_${cleanEmail.hashCode.abs()}',
-      email: cleanEmail,
-      name: formattedName,
-    );
-    await guardarPerfilUsuario(user.id, user.email, user.name);
-    return user;
+    // Modo fuera de línea: solo si el cliente Supabase no pudo inicializarse por falta de red
+    // y existe una sesión previa guardada localmente para este mismo correo.
+    final activeDoc = await LocalDbService.getDoctorProfile(cleanEmail);
+    if (activeDoc != null && (activeDoc['email']?.toString().toLowerCase() == cleanEmail.toLowerCase())) {
+      return User(
+        id: activeDoc['id'] ?? 'usr_offline',
+        email: cleanEmail,
+        name: activeDoc['name'] ?? 'Doctor (Offline)',
+      );
+    }
+    throw Exception('No fue posible autenticar. Verifica tus credenciales y conexión de red.');
   }
 
   Future<User?> register(String name, String email, String password) async {
     final cleanEmail = email.trim();
     final cleanName = name.trim();
-    try {
-      if (_supabase != null) {
+    if (_supabase != null) {
+      try {
         final response = await _supabase!.auth.signUp(
           email: cleanEmail,
           password: password,
@@ -65,18 +74,17 @@ class AuthService {
             name: cleanName,
           );
         }
+        return null;
+      } on AuthException catch (e) {
+        debugPrint('Error en registro Supabase: ${e.message}');
+        rethrow;
+      } catch (e) {
+        debugPrint('Error general en registro Supabase: $e');
+        rethrow;
       }
-    } catch (e) {
-      print('Aviso en registro Supabase: $e');
     }
 
-    final user = User(
-      id: 'usr_${cleanEmail.hashCode.abs()}',
-      email: cleanEmail,
-      name: cleanName.isNotEmpty ? cleanName : cleanEmail.split('@').first,
-    );
-    await guardarPerfilUsuario(user.id, user.email, user.name);
-    return user;
+    throw Exception('Se requiere conexión a la base de datos para registrar una nueva cuenta clínica.');
   }
 
   Future<void> guardarPerfilUsuario(String userId, String userEmail, String? nombre) async {
@@ -89,9 +97,9 @@ class AuthService {
     try {
       final supabaseService = SupabaseService();
       await supabaseService.guardarPerfilDoctor(userData);
-      print('Perfil del usuario guardado con ID: $userId');
+      debugPrint('Perfil del usuario guardado con ID: $userId');
     } catch (e) {
-      print('Error al guardar el perfil del usuario: $e');
+      debugPrint('Error al guardar el perfil del usuario: $e');
     }
   }
 
@@ -113,24 +121,18 @@ class AuthService {
           name: name,
         );
       }
+      return null;
     } catch (e) {
-      print('Error en Google Sign In: $e');
+      debugPrint('Error en Google Sign In: $e');
+      rethrow;
     }
-
-    final demoUser = User(
-      id: 'google_user_demo',
-      email: 'doctor.google@clinic.gt',
-      name: 'Dr. Ludin Solis (Google)',
-    );
-    await guardarPerfilUsuario(demoUser.id, demoUser.email, demoUser.name);
-    return demoUser;
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _supabase?.auth.resetPasswordForEmail(email);
     } catch (e) {
-      print('Reseteo de contraseña enviado: $e');
+      debugPrint('Reseteo de contraseña enviado con aviso: $e');
     }
   }
 
@@ -144,18 +146,18 @@ class AuthService {
         name: name,
       );
     }
-    return User(
-      id: 'demo-user-default',
-      email: 'doctor@clinic.gt',
-      name: 'Dr. Ludin Solis',
-    );
+    return null;
   }
 
   Future<void> signOut() async {
     try {
       await _supabase?.auth.signOut();
     } catch (e) {
-      print('Sesión cerrada');
+      debugPrint('Sesión remota cerrada con aviso: $e');
     }
+    try {
+      await LocalDbService.clearActiveDoctorSession();
+    } catch (_) {}
   }
 }
+

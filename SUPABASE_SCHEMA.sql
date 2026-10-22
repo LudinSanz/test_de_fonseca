@@ -1,5 +1,6 @@
 -- ========================================================
--- RIZO DENTAL SANCTUARY - SCRIPT DE ESTRUCTURA Y PERMISOS SUPABASE
+-- RIZO DENTAL SANCTUARY - SCRIPT DE ESTRUCTURA Y SEGURIDAD SUPABASE
+-- Versión Hardened (RLS + Políticas de Acceso Clínico Idempotentes)
 -- Ejecutar en: https://supabase.com/dashboard/project/eadmcexipsdytyjbwgis/sql
 -- ========================================================
 
@@ -119,21 +120,133 @@ CREATE TABLE IF NOT EXISTS public.reportes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- PERMISOS Y DESHABILITACIÓN DE RLS PARA CONEXIÓN TOTAL DESDE LA APP
-ALTER TABLE IF EXISTS public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.pacientes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.evaluaciones DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.recetas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.inventario DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.citas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.configuracion DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.reportes DISABLE ROW LEVEL SECURITY;
+-- 9. TABLA DE TRATAMIENTOS CLÍNICOS (tratamientos)
+CREATE TABLE IF NOT EXISTS public.tratamientos (
+  id TEXT PRIMARY KEY,
+  paciente_id TEXT NOT NULL,
+  diente INTEGER DEFAULT 0,
+  diagnostico TEXT,
+  tratamiento TEXT,
+  evolucion TEXT,
+  precio_gtq NUMERIC(10,2) DEFAULT 0.0,
+  abono_gtq NUMERIC(10,2),
+  categoria TEXT,
+  estado TEXT,
+  notas TEXT,
+  fecha TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
-GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.pacientes TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.evaluaciones TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.recetas TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.inventario TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.citas TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.configuracion TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.reportes TO anon, authenticated, service_role;
+-- 10. TABLA DE EXÁMENES Y RADIOGRAFÍAS 360° (examenes_clinicos)
+CREATE TABLE IF NOT EXISTS public.examenes_clinicos (
+  id TEXT PRIMARY KEY,
+  paciente_id TEXT NOT NULL,
+  paciente_nombre TEXT,
+  titulo TEXT NOT NULL,
+  tipo TEXT,
+  subtipo TEXT,
+  zona TEXT,
+  fecha TEXT,
+  observaciones TEXT,
+  file_name TEXT,
+  file_type TEXT,
+  file_size_bytes BIGINT DEFAULT 0,
+  file_base64 TEXT,
+  file_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- ========================================================
+-- POLÍTICAS DE SEGURIDAD (ROW LEVEL SECURITY - RLS)
+-- ========================================================
+
+-- 1. Habilitar RLS en todas las tablas
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pacientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evaluaciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recetas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.citas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuracion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reportes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tratamientos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.examenes_clinicos ENABLE ROW LEVEL SECURITY;
+
+-- 2. Revocar privilegios destructivos a conexiones anónimas públicas (anon)
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+
+-- Conceder permisos de lectura/escritura a personal autenticado y service_role
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+
+-- 3. Crear Políticas Idempotentes para Personal Clínico Autenticado (authenticated)
+
+-- USERS
+DROP POLICY IF EXISTS "allow_auth_users_all" ON public.users;
+CREATE POLICY "allow_auth_users_all" ON public.users
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- PACIENTES
+DROP POLICY IF EXISTS "allow_auth_pacientes_all" ON public.pacientes;
+CREATE POLICY "allow_auth_pacientes_all" ON public.pacientes
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- EVALUACIONES
+DROP POLICY IF EXISTS "allow_auth_evaluaciones_all" ON public.evaluaciones;
+CREATE POLICY "allow_auth_evaluaciones_all" ON public.evaluaciones
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- RECETAS
+DROP POLICY IF EXISTS "allow_auth_recetas_all" ON public.recetas;
+CREATE POLICY "allow_auth_recetas_all" ON public.recetas
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- INVENTARIO
+DROP POLICY IF EXISTS "allow_auth_inventario_all" ON public.inventario;
+CREATE POLICY "allow_auth_inventario_all" ON public.inventario
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- CITAS
+DROP POLICY IF EXISTS "allow_auth_citas_all" ON public.citas;
+CREATE POLICY "allow_auth_citas_all" ON public.citas
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- CONFIGURACION
+DROP POLICY IF EXISTS "allow_auth_configuracion_all" ON public.configuracion;
+CREATE POLICY "allow_auth_configuracion_all" ON public.configuracion
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- REPORTES
+DROP POLICY IF EXISTS "allow_auth_reportes_all" ON public.reportes;
+CREATE POLICY "allow_auth_reportes_all" ON public.reportes
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- TRATAMIENTOS
+DROP POLICY IF EXISTS "allow_auth_tratamientos_all" ON public.tratamientos;
+CREATE POLICY "allow_auth_tratamientos_all" ON public.tratamientos
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- EXAMENES CLINICOS
+DROP POLICY IF EXISTS "allow_auth_examenes_clinicos_all" ON public.examenes_clinicos;
+CREATE POLICY "allow_auth_examenes_clinicos_all" ON public.examenes_clinicos
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);

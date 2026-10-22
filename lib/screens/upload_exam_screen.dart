@@ -314,6 +314,19 @@ class _UploadExamScreenState extends State<UploadExamScreen> {
       return;
     }
 
+    // Control de seguridad: Límite máximo de 15 MB para evitar saturación de memoria (OOM) y sobrecarga en almacenamiento
+    const int maxFileSizeBytes = 15 * 1024 * 1024;
+    if (_fileSizeBytes > maxFileSizeBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El archivo seleccionado supera el límite de 15 MB. Por favor optimiza el documento o imagen antes de subirlo.'),
+          backgroundColor: AppColors.error,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {

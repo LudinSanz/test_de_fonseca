@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATM - Test de Fonseca</title>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>ATM - Test de Fonseca | Rizo Dental</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -352,30 +355,18 @@
                 submitBtn.textContent = 'Iniciando sesión...';
                 submitBtn.disabled = true;
                 
-                // Simular retraso de red
+                // Notificación de seguridad para entorno web
                 setTimeout(() => {
-                    // Credenciales "válidas" para la demostración
-                    if (email === 'doctor@clinic.gt' && password === 'password123') {
-                        showNotification('¡Inicio de sesión exitoso! Redirigiendo...');
-                        // En una aplicación real, redirigiríamos al usuario a su dashboard
-                    } else {
-                        showNotification('Correo o contraseña incorrectos', true);
-                    }
-                    
-                    // Restaurar botón
+                    showNotification('Para autenticación segura, utilice la aplicación oficial Android/Desktop compilada.', true);
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
-                }, 1500);
+                }, 800);
             }
             
             // Manejar clic en Registrarse
             registerBtn.addEventListener('click', function() {
-                showNotification('Función de registro no implementada en esta demo');
+                showNotification('El registro clínico debe realizarse desde la aplicación oficial autenticada.', true);
             });
-            
-            // Rellenar con valores de ejemplo para prueba
-            emailInput.value = 'doctor@clinic.gt';
-            passwordInput.value = 'password123';
         });
     </script>
 </body>
