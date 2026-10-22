@@ -476,6 +476,7 @@ class _PatientDirectoryScreenState extends State<PatientDirectoryScreen> with Si
                     );
                   },
                 ),
+          ),
         ),
       ],
     );
